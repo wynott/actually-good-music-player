@@ -16,7 +16,7 @@ project "agmp"
         "miniaudio.h"
     }
 
-    includedirs { "." }
+    includedirs { ".", "vendor/glm", "vendor/spdlog/include" }
 
     filter "configurations:Debug"
         symbols "On"
