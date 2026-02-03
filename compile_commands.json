@@ -1,0 +1,39 @@
+[
+ {
+  "directory": "D:\\dev\\agmp",
+  "arguments": [
+   "x86_64-w64-mingw32-g++",
+   "-MD",
+   "-MP",
+   "-DDEBUG",
+   "-I.",
+   "-g",
+   "-std=c++17",
+   "-o",
+   "bin-int/Debug/main.o",
+   "-MF",
+   "bin-int/Debug/main.d",
+   "-c",
+   "main.cpp"
+  ],
+  "file": "main.cpp"
+ },
+ {
+  "directory": "D:\\dev\\agmp",
+  "arguments": [
+   "cc",
+   "-MD",
+   "-MP",
+   "-DDEBUG",
+   "-I.",
+   "-g",
+   "-o",
+   "bin-int/Debug/player.o",
+   "-MF",
+   "bin-int/Debug/player.d",
+   "-c",
+   "player.c"
+  ],
+  "file": "player.c"
+ }
+]
