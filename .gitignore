@@ -1,0 +1,9 @@
+.cache/
+bin/
+bin-int/
+build/
+compile_commands.json
+Makefile
+agmp.make
+*.exe
+*.mp3
