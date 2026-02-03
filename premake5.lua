@@ -11,6 +11,8 @@ project "agmp"
 
     files {
         "main.cpp",
+        "terminal.cpp",
+        "terminal.h",
         "player.c",
         "player.h",
         "miniaudio.h"
