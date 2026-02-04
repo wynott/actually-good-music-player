@@ -132,24 +132,36 @@ void Renderer::set_text_colour(const glm::vec3& colour)
 
 void Renderer::set_canvas(const glm::vec3& colour)
 {
-    (void)colour;
+    set_canvas(colour, colour, colour, colour);
 
+}
+
+void Renderer::set_canvas(const glm::vec3& top_left, const glm::vec3& top_right, const glm::vec3& bottom_left, const glm::vec3& bottom_right)
+{
     glm::ivec2 size = _terminal.get_size();
     if (size.x <= 0 || size.y <= 0)
     {
         return;
     }
 
+    auto lerp = [](const glm::vec3& a, const glm::vec3& b, float t)
+    {
+        return a + (b - a) * t;
+    };
+
     std::vector<Terminal::Character>& background = _terminal.mutate_canvas();
     int width = size.x;
     int height = size.y;
     for (int y = 0; y < height; ++y)
     {
-        float t = (height > 1) ? static_cast<float>(y) / static_cast<float>(height - 1) : 0.0f;
-        float shade = 0.25f + (0.5f - 0.25f) * t;
-        glm::vec3 colour_vec(shade * 255.0f, shade * 255.0f, shade * 255.0f);
+        float v = (height > 1) ? static_cast<float>(y) / static_cast<float>(height - 1) : 0.0f;
         for (int x = 0; x < width; ++x)
         {
+            float u = (width > 1) ? static_cast<float>(x) / static_cast<float>(width - 1) : 0.0f;
+            glm::vec3 top = lerp(top_left, top_right, u);
+            glm::vec3 bottom = lerp(bottom_left, bottom_right, u);
+            glm::vec3 colour_vec = lerp(top, bottom, v);
+
             size_t index = static_cast<size_t>(y * width + x);
             if (index >= background.size())
             {
@@ -161,7 +173,6 @@ void Renderer::set_canvas(const glm::vec3& colour)
             cell.set_background_colour(colour_vec);
         }
     }
-
 }
 
 void Renderer::draw_box(const glm::ivec2& min_corner, const glm::ivec2& size)

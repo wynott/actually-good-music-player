@@ -6,6 +6,8 @@
 #include <string>
 #include <vector>
 
+class Player;
+
 #include <glm/vec2.hpp>
 
 #include "config.h"
@@ -52,8 +54,13 @@ public:
 
     virtual void on_soft_select() = 0;
     virtual void on_select() = 0;
+    virtual void scan_and_populate(
+        const std::filesystem::path& directory,
+        Browser* owner,
+        std::vector<std::unique_ptr<BrowserItem>>& out) const = 0;
 
 protected:
+    BrowserItem() = default;
     Browser* get_owner() const;
 
 private:
@@ -66,18 +73,28 @@ class FolderItem : public BrowserItem
 {
 public:
     FolderItem(Browser* owner, const std::string& name, const std::filesystem::path& path);
+    FolderItem() = default;
 
     void on_soft_select() override;
     void on_select() override;
+    void scan_and_populate(
+        const std::filesystem::path& directory,
+        Browser* owner,
+        std::vector<std::unique_ptr<BrowserItem>>& out) const override;
 };
 
 class Mp3Item : public BrowserItem
 {
 public:
     Mp3Item(Browser* owner, const std::string& name, const std::filesystem::path& path);
+    Mp3Item() = default;
 
     void on_soft_select() override;
     void on_select() override;
+    void scan_and_populate(
+        const std::filesystem::path& directory,
+        Browser* owner,
+        std::vector<std::unique_ptr<BrowserItem>>& out) const override;
 };
 
 class Browser
@@ -101,6 +118,7 @@ public:
     void give_focus(Browser* target);
     void set_left(Browser* left);
     void set_right(Browser* right);
+    void set_player(Player* player);
 
     const glm::ivec2& get_location() const;
     const glm::ivec2& get_size() const;
@@ -112,6 +130,9 @@ public:
     bool is_focused() const;
     Browser* get_left() const;
     Browser* get_right() const;
+    Player* get_player() const;
+    std::string get_next_song_path() const;
+    bool advance_to_next_song(std::string& out_path);
 
     void refresh_contents();
     void refresh();
@@ -124,7 +145,13 @@ private:
     std::vector<std::unique_ptr<BrowserItem>> _contents;
     std::filesystem::path _path;
     size_t _selected_index = 0;
+    size_t _scroll_offset = 0;
     bool _is_focused = false;
     Browser* _left = nullptr;
     Browser* _right = nullptr;
+    Player* _player = nullptr;
+
+private:
+    int get_visible_rows() const;
+    void update_scroll_for_selection();
 };

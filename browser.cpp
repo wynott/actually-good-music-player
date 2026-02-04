@@ -1,86 +1,13 @@
 #include "browser.h"
 
 #include <algorithm>
+#include <filesystem>
 
 #include "browser.h"
 #include "draw.h"
 #include "input.h"
+#include "player.h"
 #include "terminal.h"
-
-std::vector<browser_column::entry> list_entries(const std::filesystem::path& path)
-{
-    namespace fs = std::filesystem;
-    std::vector<browser_column::entry> result;
-    try
-    {
-        if (fs::exists(path) && fs::is_directory(path))
-        {
-            for (const auto& entry : fs::directory_iterator(path))
-            {
-                browser_column::entry item;
-                item.name = entry.path().filename().string();
-                item.path = entry.path();
-                item.is_dir = entry.is_directory();
-                result.push_back(item);
-            }
-        }
-    }
-    catch (...)
-    {
-    }
-
-    std::sort(result.begin(), result.end(), [](const browser_column::entry& a, const browser_column::entry& b)
-    {
-        return a.name < b.name;
-    });
-    return result;
-}
-
-void refresh_column(browser_column& column)
-{
-    column.entries = list_entries(column.path);
-    if (column.entries.empty())
-    {
-        column.selected_index = -1;
-    }
-    else
-    {
-        column.selected_index = std::clamp(column.selected_index, 0, static_cast<int>(column.entries.size() - 1));
-    }
-}
-
-bool update_layout(
-    const app_config& config,
-    browser_column& artist,
-    browser_column& album,
-    browser_column& song,
-    int box_gap,
-    int& art_origin_x,
-    int& metadata_origin_x)
-{
-    int prev_art_origin = art_origin_x;
-
-    artist.width = std::max(1, config.col_width_artist);
-    album.width = std::max(1, config.col_width_album);
-    song.width = std::max(1, config.col_width_song);
-
-    int artist_box_start = 1;
-    int artist_box_width = artist.width + 2;
-    int album_box_start = artist_box_start + artist_box_width + box_gap;
-    int album_box_width = album.width + 2;
-    int song_box_start = album_box_start + album_box_width + box_gap;
-    int song_box_width = song.width + 2;
-
-    artist.start_col = artist_box_start + 1;
-    album.start_col = album_box_start + 1;
-    song.start_col = song_box_start + 1;
-
-    int browser_width = artist_box_width + album_box_width + song_box_width + box_gap * 2;
-    art_origin_x = std::max(0, browser_width + box_gap);
-    metadata_origin_x = art_origin_x + config.art_width_chars + box_gap;
-
-    return prev_art_origin != art_origin_x;
-}
 
 Browser::Browser() = default;
 
@@ -163,6 +90,34 @@ void FolderItem::on_soft_select()
     }
 }
 
+void FolderItem::scan_and_populate(
+    const std::filesystem::path& directory,
+    Browser* owner,
+    std::vector<std::unique_ptr<BrowserItem>>& out) const
+{
+    namespace fs = std::filesystem;
+    try
+    {
+        if (!fs::exists(directory) || !fs::is_directory(directory))
+        {
+            return;
+        }
+
+        for (const auto& entry : fs::directory_iterator(directory))
+        {
+            if (!entry.is_directory())
+            {
+                continue;
+            }
+            std::string name = entry.path().filename().string();
+            out.push_back(std::make_unique<FolderItem>(owner, name, entry.path()));
+        }
+    }
+    catch (...)
+    {
+    }
+}
+
 void FolderItem::on_select()
 {
 }
@@ -179,6 +134,59 @@ void Mp3Item::on_soft_select()
 
 void Mp3Item::on_select()
 {
+    Browser* owner = get_owner();
+    if (!owner)
+    {
+        return;
+    }
+
+    Player* player = owner->get_player();
+    if (!player)
+    {
+        return;
+    }
+
+    player->set_current_track(get_path().string());
+    player->stop_playback();
+    player->start_playback(player->get_current_track());
+}
+
+void Mp3Item::scan_and_populate(
+    const std::filesystem::path& directory,
+    Browser* owner,
+    std::vector<std::unique_ptr<BrowserItem>>& out) const
+{
+    namespace fs = std::filesystem;
+    try
+    {
+        if (!fs::exists(directory) || !fs::is_directory(directory))
+        {
+            return;
+        }
+
+        for (const auto& entry : fs::directory_iterator(directory))
+        {
+            if (!entry.is_regular_file())
+            {
+                continue;
+            }
+            fs::path path = entry.path();
+            std::string extension = path.extension().string();
+            std::transform(extension.begin(), extension.end(), extension.begin(), [](unsigned char c)
+            {
+                return static_cast<char>(std::tolower(c));
+            });
+            if (extension != ".mp3")
+            {
+                continue;
+            }
+            std::string name = path.filename().string();
+            out.push_back(std::make_unique<Mp3Item>(owner, name, path));
+        }
+    }
+    catch (...)
+    {
+    }
 }
 
 
@@ -196,6 +204,7 @@ void Browser::set_selected_index(size_t index)
     if (_contents.empty())
     {
         _selected_index = 0;
+        _scroll_offset = 0;
         return;
     }
 
@@ -203,6 +212,8 @@ void Browser::set_selected_index(size_t index)
     {
         _selected_index = _contents.size() - 1;
     }
+
+    update_scroll_for_selection();
 }
 
 void Browser::move_selection(int direction)
@@ -239,54 +250,69 @@ void Browser::resize_to_fit_contents()
 {
     glm::ivec2 previous_size = _size;
     size_t rows = _contents.size();
-    int required = static_cast<int>(rows + 3);
+    int required = static_cast<int>(rows + 2);
     if (required < 3)
     {
         required = 3;
     }
     _size.y = required;
 
+    glm::ivec2 terminal_size = Terminal::instance().get_size();
+    if (terminal_size.y > 0)
+    {
+        int max_height = terminal_size.y - 1 - _location.y;
+        if (max_height > 0 && _size.y > max_height)
+        {
+            _size.y = max_height;
+        }
+    }
+
     glm::ivec2 min_corner = _location;
     glm::ivec2 max_size(
         std::max(previous_size.x, _size.x),
         std::max(previous_size.y, _size.y));
-    if (max_size.x > 0 && max_size.y > 0)
+    if (max_size.x <= 0 || max_size.y <= 0)
     {
-        Terminal& terminal = Terminal::instance();
-        glm::ivec2 terminal_size = terminal.get_size();
-        if (terminal_size.x > 0 && terminal_size.y > 0)
-        {
-            int start_x = std::max(0, min_corner.x);
-            int start_y = std::max(0, min_corner.y);
-            int max_x = std::min(terminal_size.x, min_corner.x + max_size.x);
-            int max_y = std::min(terminal_size.y, min_corner.y + max_size.y);
-            int new_max_x = std::min(terminal_size.x, min_corner.x + _size.x);
-            int new_max_y = std::min(terminal_size.y, min_corner.y + _size.y);
+        return;
+    }
 
-            if (start_x < max_x && start_y < max_y)
+    Terminal& terminal = Terminal::instance();
+    if (terminal_size.x <= 0 || terminal_size.y <= 0)
+    {
+        return;
+    }
+
+    int start_x = std::max(0, min_corner.x);
+    int start_y = std::max(0, min_corner.y);
+    int max_x = std::min(terminal_size.x, min_corner.x + max_size.x);
+    int max_y = std::min(terminal_size.y, min_corner.y + max_size.y);
+    if (start_x >= max_x || start_y >= max_y)
+    {
+        return;
+    }
+
+    int new_max_x = std::min(terminal_size.x, min_corner.x + _size.x);
+    int new_max_y = std::min(terminal_size.y, min_corner.y + _size.y);
+
+    std::vector<Terminal::Character>& buffer = terminal.mutate_buffer();
+    int width = terminal_size.x;
+    for (int y = start_y; y < max_y; ++y)
+    {
+        for (int x = start_x; x < max_x; ++x)
+        {
+            if (x >= new_max_x || y >= new_max_y)
             {
-                std::vector<Terminal::Character>& buffer = terminal.mutate_buffer();
-                int width = terminal_size.x;
-                for (int y = start_y; y < max_y; ++y)
+                size_t index = static_cast<size_t>(y * width + x);
+                if (index < buffer.size())
                 {
-                    for (int x = start_x; x < max_x; ++x)
-                    {
-                        if (x >= new_max_x || y >= new_max_y)
-                        {
-                            size_t index = static_cast<size_t>(y * width + x);
-                            if (index < buffer.size())
-                            {
-                                buffer[index].set_glyph(U' ');
-                            }
-                        }
-                    }
+                    buffer[index].set_glyph(U' ');
                 }
             }
         }
-
-        glm::ivec2 max_corner = min_corner + max_size - glm::ivec2(1);
-        Terminal::instance().write_region(min_corner, max_corner);
     }
+
+    glm::ivec2 max_corner = min_corner + max_size - glm::ivec2(1);
+    terminal.write_region(min_corner, max_corner);
 }
 
 void Browser::redraw()
@@ -343,6 +369,15 @@ void Browser::update(int key)
     {
         int direction = (key == input_key_up) ? -1 : 1;
         focused->move_selection(direction);
+        return;
+    }
+
+    if (key == '\r' || key == '\n')
+    {
+        if (!focused->_contents.empty() && focused->_selected_index < focused->_contents.size())
+        {
+            focused->_contents[focused->_selected_index]->on_select();
+        }
     }
 }
 
@@ -375,6 +410,11 @@ void Browser::set_left(Browser* left)
 void Browser::set_right(Browser* right)
 {
     _right = right;
+}
+
+void Browser::set_player(Player* player)
+{
+    _player = player;
 }
 
 const glm::ivec2& Browser::get_location() const
@@ -428,23 +468,68 @@ Browser* Browser::get_right() const
     return _right;
 }
 
+Player* Browser::get_player() const
+{
+    return _player;
+}
+
+
+std::string Browser::get_next_song_path() const
+{
+    if (_contents.empty())
+    {
+        return std::string();
+    }
+
+    size_t index = _selected_index + 1;
+    while (index < _contents.size())
+    {
+        if (dynamic_cast<const Mp3Item*>(_contents[index].get()) != nullptr)
+        {
+            return _contents[index]->get_path().string();
+        }
+        index += 1;
+    }
+
+    return std::string();
+}
+
+bool Browser::advance_to_next_song(std::string& out_path)
+{
+    if (_contents.empty())
+    {
+        return false;
+    }
+
+    size_t index = _selected_index + 1;
+    while (index < _contents.size())
+    {
+        if (dynamic_cast<const Mp3Item*>(_contents[index].get()) != nullptr)
+        {
+            set_selected_index(index);
+            out_path = _contents[index]->get_path().string();
+            redraw();
+            return true;
+        }
+        index += 1;
+    }
+
+    return false;
+}
+
 void Browser::refresh_contents()
 {
     _contents.clear();
-    std::vector<browser_column::entry> entries = list_entries(_path);
-    _contents.reserve(entries.size());
+    _scroll_offset = 0;
+    FolderItem folder_scanner(this, std::string(), std::filesystem::path());
+    Mp3Item mp3_scanner(this, std::string(), std::filesystem::path());
+    folder_scanner.scan_and_populate(_path, this, _contents);
+    mp3_scanner.scan_and_populate(_path, this, _contents);
 
-    for (const browser_column::entry& entry : entries)
+    std::sort(_contents.begin(), _contents.end(), [](const std::unique_ptr<BrowserItem>& a, const std::unique_ptr<BrowserItem>& b)
     {
-        if (entry.is_dir)
-        {
-            _contents.push_back(std::make_unique<FolderItem>(this, entry.name, entry.path));
-        }
-        else
-        {
-            _contents.push_back(std::make_unique<Mp3Item>(this, entry.name, entry.path));
-        }
-    }
+        return a->get_name() < b->get_name();
+    });
 
     if (_contents.empty())
     {
@@ -482,33 +567,35 @@ void Browser::draw() const
         return;
     }
 
-    glm::ivec2 name_pos(_location.x + 1, _location.y + 1);
-    std::string title = _name.empty() ? std::string("Browser") : _name;
-    if (static_cast<int>(title.size()) > inner_width)
-    {
-        title.resize(static_cast<size_t>(inner_width));
-    }
-    renderer.draw_string(title, name_pos);
-
-    int list_start_y = name_pos.y + 1;
-    int available_rows = inner_height - 1;
+    int list_start_y = _location.y + 1;
+    int available_rows = inner_height;
     if (available_rows <= 0)
     {
         return;
     }
 
-    size_t max_rows = static_cast<size_t>(available_rows);
-    size_t row_count = std::min(_contents.size(), max_rows);
+    bool has_overflow = _contents.size() > static_cast<size_t>(available_rows);
+    int bottom_inner_y = _location.y + _size.y - 2;
+    int max_entry_y = has_overflow ? bottom_inner_y - 1 : bottom_inner_y;
+    int max_entry_rows = max_entry_y - list_start_y + 1;
+    if (max_entry_rows <= 0)
+    {
+        return;
+    }
+
+    size_t start_index = _scroll_offset;
+    size_t row_count = std::min(static_cast<size_t>(max_entry_rows), _contents.size() - start_index);
     for (size_t i = 0; i < row_count; ++i)
     {
-        const BrowserItem& item = *_contents[i];
+        size_t item_index = start_index + i;
+        const BrowserItem& item = *_contents[item_index];
         std::string line = item.get_name();
         if (static_cast<int>(line.size()) > inner_width - 2)
         {
             line.resize(static_cast<size_t>(inner_width - 2));
         }
 
-        bool is_selected = (i == _selected_index);
+        bool is_selected = (item_index == _selected_index);
         if (is_selected)
         {
             line.insert(line.begin(), '>');
@@ -532,6 +619,57 @@ void Browser::draw() const
         {
             renderer.draw_string(line, row_location);
         }
+    }
+
+    if (has_overflow && available_rows > 0 && inner_width > 0)
+    {
+        std::string indicator(static_cast<size_t>(inner_width), ' ');
+        size_t arrow_index = static_cast<size_t>(std::max(0, inner_width / 2));
+        if (arrow_index < indicator.size())
+        {
+            indicator[arrow_index] = 'v';
+        }
+        renderer.draw_string(indicator, glm::ivec2(_location.x + 1, bottom_inner_y));
+    }
+}
+
+int Browser::get_visible_rows() const
+{
+    int inner_height = _size.y - 2;
+    int available_rows = inner_height;
+    if (available_rows <= 0)
+    {
+        return 0;
+    }
+
+    bool has_overflow = _contents.size() > static_cast<size_t>(available_rows);
+    int visible_rows = available_rows;
+    if (has_overflow && visible_rows > 0)
+    {
+        visible_rows -= 1;
+    }
+    return std::max(0, visible_rows);
+}
+
+void Browser::update_scroll_for_selection()
+{
+    int visible_rows = get_visible_rows();
+    if (visible_rows <= 0)
+    {
+        _scroll_offset = 0;
+        return;
+    }
+
+    if (_selected_index < _scroll_offset)
+    {
+        _scroll_offset = _selected_index;
+        return;
+    }
+
+    size_t end_index = _scroll_offset + static_cast<size_t>(visible_rows);
+    if (_selected_index >= end_index)
+    {
+        _scroll_offset = _selected_index - static_cast<size_t>(visible_rows - 1);
     }
 }
 void Browser::soft_select()

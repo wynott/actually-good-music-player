@@ -102,12 +102,18 @@ app_config load_config(const std::string& path)
     config.browser_inactive_bg = {160, 160, 160};
     config.ui_box_fg = {240, 240, 240};
     config.ui_text_fg = {240, 240, 240};
+    config.rice_colour = {247, 185, 85};
+    config.rice_background_tl = {22, 22, 27};
+    config.rice_background_tr = {21, 22, 27};
+    config.rice_background_bl = {23, 24, 29};
+    config.rice_background_br = {44, 52, 58};
     config.metadata_max_width = 48;
     config.col_width_artist = 20;
     config.col_width_album = 24;
     config.col_width_song = 30;
     config.art_width_chars = 80;
     config.art_height_chars = 40;
+    config.browser_padding = 0;
     config.listen_port = 4242;
 
     std::ifstream file(path);
@@ -272,6 +278,26 @@ app_config load_config(const std::string& path)
         {
             config.ui_text_fg = parse_color(value, config.ui_text_fg);
         }
+        else if (key == "rice_colour")
+        {
+            config.rice_colour = parse_color(value, config.rice_colour);
+        }
+        else if (key == "rice_background_tl")
+        {
+            config.rice_background_tl = parse_color(value, config.rice_background_tl);
+        }
+        else if (key == "rice_background_tr")
+        {
+            config.rice_background_tr = parse_color(value, config.rice_background_tr);
+        }
+        else if (key == "rice_background_bl")
+        {
+            config.rice_background_bl = parse_color(value, config.rice_background_bl);
+        }
+        else if (key == "rice_background_br")
+        {
+            config.rice_background_br = parse_color(value, config.rice_background_br);
+        }
         else if (key == "metadata_max_width")
         {
             try
@@ -327,6 +353,16 @@ app_config load_config(const std::string& path)
             try
             {
                 config.art_height_chars = std::max(1, std::stoi(value));
+            }
+            catch (...)
+            {
+            }
+        }
+        else if (key == "browser_padding")
+        {
+            try
+            {
+                config.browser_padding = std::max(0, std::stoi(value));
             }
             catch (...)
             {

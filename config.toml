@@ -22,6 +22,11 @@ browser_inactive_fg = "#141414"
 browser_inactive_bg = "#A0A0A0"
 ui_box_fg = "#F0F0F0"
 ui_text_fg = "#F0F0F0"
+rice_colour = "#F7B955"
+rice_background_tl = "#16161B"
+rice_background_tr = "#15161B"
+rice_background_bl = "#17181D"
+rice_background_br = "#2C343A"
 # Max characters for metadata lines before truncation
 metadata_max_width = 32
 # browser_normal_fg: light gray
@@ -35,6 +40,7 @@ col_width_album = 24
 col_width_song = 30
 art_width_chars = 40
 art_height_chars = 20
+browser_padding = 0
 # Note: terminal characters are not square; adjust width/height per font.
 listen_port = 4242
 # Note: routers usually block inbound traffic unless port-forwarded.

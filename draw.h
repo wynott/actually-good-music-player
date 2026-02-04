@@ -25,6 +25,7 @@ public:
     explicit Renderer(Terminal& terminal);
     static Renderer& instance();
     void set_canvas(const glm::vec3& colour);
+    void set_canvas(const glm::vec3& top_left, const glm::vec3& top_right, const glm::vec3& bottom_left, const glm::vec3& bottom_right);
     void set_box_colour(const glm::vec3& colour);
     void set_text_colour(const glm::vec3& colour);
 

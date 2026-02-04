@@ -4,6 +4,8 @@
 #include <fstream>
 #include <vector>
 
+#include "draw.h"
+#include "terminal.h"
 #include "miniaudio.h"
 
 static uint32_t read_be32(const uint8_t* data)
@@ -212,4 +214,69 @@ bool read_track_metadata(const std::string& path, track_metadata& metadata)
 
     read_id3_tags(path, metadata);
     return true;
+}
+
+MetadataPanel::MetadataPanel() = default;
+
+MetadataPanel::MetadataPanel(const glm::ivec2& location, const glm::ivec2& size)
+    : _location(location),
+      _size(size)
+{
+}
+
+void MetadataPanel::set_location(const glm::ivec2& location)
+{
+    _location = location;
+}
+
+void MetadataPanel::set_size(const glm::ivec2& size)
+{
+    _size = size;
+}
+
+void MetadataPanel::draw(const app_config& config, const track_metadata& meta)
+{
+    if (_size.x <= 0 || _size.y <= 0)
+    {
+        return;
+    }
+
+    std::vector<std::string> lines;
+    if (!meta.title.empty()) lines.push_back("Title: " + meta.title);
+    if (!meta.artist.empty()) lines.push_back("Artist: " + meta.artist);
+    if (!meta.album.empty()) lines.push_back("Album: " + meta.album);
+    if (!meta.date.empty()) lines.push_back("Date: " + meta.date);
+    if (!meta.genre.empty()) lines.push_back("Genre: " + meta.genre);
+    if (!meta.track.empty()) lines.push_back("Track: " + meta.track);
+    if (meta.sample_rate > 0) lines.push_back("Hz: " + std::to_string(meta.sample_rate));
+    if (meta.channels > 0) lines.push_back("Channels: " + std::to_string(meta.channels));
+    if (meta.duration_ms > 0) lines.push_back("Length: " + std::to_string(meta.duration_ms / 1000) + "s");
+    if (meta.bitrate_kbps > 0) lines.push_back("Bitrate: " + std::to_string(meta.bitrate_kbps) + " kbps");
+    if (meta.file_size_bytes > 0) lines.push_back("Size: " + std::to_string(meta.file_size_bytes / 1024) + " KB");
+
+    int inner_width = std::max(0, _size.x - 2);
+    int inner_height = std::max(0, _size.y - 2);
+
+    Renderer& renderer = Renderer::instance();
+    renderer.draw_box(_location, _size);
+
+    int max_lines = std::min(inner_height, static_cast<int>(lines.size()));
+    for (int i = 0; i < max_lines; ++i)
+    {
+        std::string line = lines[static_cast<size_t>(i)];
+        int max_width = inner_width;
+        if (config.metadata_max_width > 0)
+        {
+            max_width = std::min(max_width, config.metadata_max_width);
+        }
+        if (max_width > 0 && static_cast<int>(line.size()) > max_width)
+        {
+            line.resize(static_cast<size_t>(max_width));
+        }
+        renderer.draw_string(line, glm::ivec2(_location.x + 1, _location.y + 1 + i));
+    }
+
+    glm::ivec2 min_corner = _location;
+    glm::ivec2 max_corner = _location + _size - glm::ivec2(1);
+    Terminal::instance().write_region(min_corner, max_corner);
 }

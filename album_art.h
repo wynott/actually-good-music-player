@@ -4,6 +4,8 @@
 #include "terminal.h"
 #include "config.h"
 
+class Player;
+
 #include <atomic>
 #include <mutex>
 #include <thread>
@@ -38,14 +40,15 @@ public:
     bool load(const std::vector<unsigned char>& image_data);
     void draw() const;
 
-    glm::vec3 average_colour() const;
+    void average_colour(glm::vec3& top_left, glm::vec3& top_right, glm::vec3& bottom_left, glm::vec3& bottom_right) const;
 
     void set_track(
         const std::string& path,
         const app_config& config,
         const std::string& artist,
         const std::string& album);
-    void tick(
+    void set_player(Player* player);
+    void update_from_player(
         const app_config& config,
         int origin_x,
         int origin_y);
@@ -69,6 +72,7 @@ private:
     std::string _current_track;
     std::string _current_artist;
     std::string _current_album;
+    Player* _player = nullptr;
 
 private:
     glm::ivec2 _location = glm::ivec2(0);

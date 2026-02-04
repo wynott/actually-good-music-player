@@ -14,7 +14,9 @@
 
 #include "draw.h"
 #include "http.h"
+#include "player.h"
 #include "vendor/json.hpp"
+
 
 static uint32_t read_be32(const uint8_t* data)
 {
@@ -410,17 +412,35 @@ void AlbumArt::set_track(
     }
 }
 
-void AlbumArt::tick(
+void AlbumArt::set_player(Player* player)
+{
+    _player = player;
+}
+
+void AlbumArt::update_from_player(
     const app_config& config,
     int origin_x,
     int origin_y)
 {
-    if (!_dirty.exchange(false, std::memory_order_acq_rel))
+    if (!_player)
     {
         return;
     }
 
-    render_current(config, origin_x, origin_y, nullptr);
+    player_context context = _player->get_context();
+    _player->ensure_context_from_track();
+    context = _player->get_context();
+
+    set_track(
+        _player->get_current_track(),
+        config,
+        context.artist,
+        context.album);
+
+    if (_dirty.exchange(false, std::memory_order_acq_rel))
+    {
+        render_current(config, origin_x, origin_y, nullptr);
+    }
 }
 
 bool AlbumArt::render_current(
@@ -480,8 +500,20 @@ bool AlbumArt::render_current(
         return true;
     }
 
-    glm::vec3 avg_colour = this->average_colour();
-    clear_and_set_avg(avg_colour);
+    glm::vec3 avg_tl(0.0f);
+    glm::vec3 avg_tr(0.0f);
+    glm::vec3 avg_bl(0.0f);
+    glm::vec3 avg_br(0.0f);
+    average_colour(avg_tl, avg_tr, avg_bl, avg_br);
+    clear_and_set_avg((avg_tl + avg_tr + avg_bl + avg_br) * 0.25f);
+    Renderer::instance().set_canvas(avg_tl, avg_tr, avg_bl, avg_br);
+    {
+        glm::ivec2 size = Terminal::instance().get_size();
+        if (size.x > 0 && size.y > 0)
+        {
+            Terminal::instance().write_region(glm::ivec2(0, 0), glm::ivec2(size.x - 1, size.y - 1));
+        }
+    }
 
     draw();
     glm::ivec2 min_corner = get_location();
@@ -618,34 +650,110 @@ void AlbumArt::draw() const
     }
 }
 
-glm::vec3 AlbumArt::average_colour() const
+void AlbumArt::average_colour(glm::vec3& top_left, glm::vec3& top_right, glm::vec3& bottom_left, glm::vec3& bottom_right) const
 {
-    if (_pixels.empty())
+    top_left = glm::vec3(0.0f);
+    top_right = glm::vec3(0.0f);
+    bottom_left = glm::vec3(0.0f);
+    bottom_right = glm::vec3(0.0f);
+
+    if (_pixels.empty() || _size.x <= 0 || _size.y <= 0)
     {
-        return glm::vec3(0.0f);
+        return;
     }
 
-    double sum_r = 0.0;
-    double sum_g = 0.0;
-    double sum_b = 0.0;
-    double count = 0.0;
+    int mid_x = _size.x / 2;
+    int mid_y = _size.y / 2;
 
-    for (const Terminal::Character& cell : _pixels)
+    double sum_tl_r = 0.0;
+    double sum_tl_g = 0.0;
+    double sum_tl_b = 0.0;
+    double sum_tr_r = 0.0;
+    double sum_tr_g = 0.0;
+    double sum_tr_b = 0.0;
+    double sum_bl_r = 0.0;
+    double sum_bl_g = 0.0;
+    double sum_bl_b = 0.0;
+    double sum_br_r = 0.0;
+    double sum_br_g = 0.0;
+    double sum_br_b = 0.0;
+
+    double count_tl = 0.0;
+    double count_tr = 0.0;
+    double count_bl = 0.0;
+    double count_br = 0.0;
+
+    for (int y = 0; y < _size.y; ++y)
     {
-        glm::vec3 colour = cell.get_foreground_colour();
-        sum_r += colour.r;
-        sum_g += colour.g;
-        sum_b += colour.b;
-        count += 1.0;
+        for (int x = 0; x < _size.x; ++x)
+        {
+            size_t index = static_cast<size_t>(y * _size.x + x);
+            if (index >= _pixels.size())
+            {
+                continue;
+            }
+
+            glm::vec3 colour = _pixels[index].get_foreground_colour();
+            bool left = x < mid_x;
+            bool top = y < mid_y;
+
+            if (top && left)
+            {
+                sum_tl_r += colour.r;
+                sum_tl_g += colour.g;
+                sum_tl_b += colour.b;
+                count_tl += 1.0;
+            }
+            else if (top && !left)
+            {
+                sum_tr_r += colour.r;
+                sum_tr_g += colour.g;
+                sum_tr_b += colour.b;
+                count_tr += 1.0;
+            }
+            else if (!top && left)
+            {
+                sum_bl_r += colour.r;
+                sum_bl_g += colour.g;
+                sum_bl_b += colour.b;
+                count_bl += 1.0;
+            }
+            else
+            {
+                sum_br_r += colour.r;
+                sum_br_g += colour.g;
+                sum_br_b += colour.b;
+                count_br += 1.0;
+            }
+        }
     }
 
-    if (count <= 0.0)
+    if (count_tl > 0.0)
     {
-        return glm::vec3(0.0f);
+        top_left = glm::vec3(
+            static_cast<float>(sum_tl_r / count_tl),
+            static_cast<float>(sum_tl_g / count_tl),
+            static_cast<float>(sum_tl_b / count_tl));
     }
-
-    return glm::vec3(
-        static_cast<float>(sum_r / count),
-        static_cast<float>(sum_g / count),
-        static_cast<float>(sum_b / count));
+    if (count_tr > 0.0)
+    {
+        top_right = glm::vec3(
+            static_cast<float>(sum_tr_r / count_tr),
+            static_cast<float>(sum_tr_g / count_tr),
+            static_cast<float>(sum_tr_b / count_tr));
+    }
+    if (count_bl > 0.0)
+    {
+        bottom_left = glm::vec3(
+            static_cast<float>(sum_bl_r / count_bl),
+            static_cast<float>(sum_bl_g / count_bl),
+            static_cast<float>(sum_bl_b / count_bl));
+    }
+    if (count_br > 0.0)
+    {
+        bottom_right = glm::vec3(
+            static_cast<float>(sum_br_r / count_br),
+            static_cast<float>(sum_br_g / count_br),
+            static_cast<float>(sum_br_b / count_br));
+    }
 }

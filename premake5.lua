@@ -35,6 +35,10 @@ project "agmp"
         "terminal.h",
         "player.cpp",
         "player.h",
+        "spectrum_analyzer.cpp",
+        "spectrum_analyzer.h",
+        "rice.cpp",
+        "rice.h",
         "miniaudio.h"
     }
 

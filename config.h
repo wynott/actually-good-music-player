@@ -31,12 +31,18 @@ struct app_config
     rgb_color browser_inactive_bg;
     rgb_color ui_box_fg;
     rgb_color ui_text_fg;
+    rgb_color rice_colour;
+    rgb_color rice_background_tl;
+    rgb_color rice_background_tr;
+    rgb_color rice_background_bl;
+    rgb_color rice_background_br;
     int metadata_max_width;
     int col_width_artist;
     int col_width_album;
     int col_width_song;
     int art_width_chars;
     int art_height_chars;
+    int browser_padding;
     int listen_port;
 };
 

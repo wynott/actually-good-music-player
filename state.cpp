@@ -1,6 +1,9 @@
 #include "state.h"
 
+#include <algorithm>
 #include <fstream>
+
+#include "browser.h"
 
 static std::string trim(std::string value)
 {
@@ -37,7 +40,8 @@ static std::string strip_quotes(std::string value)
 app_state load_state(const std::string& path)
 {
     app_state state;
-    state.last_position_ms = 0;
+    state.context.position_ms = 0;
+    state.song_index = 0;
 
     std::ifstream file(path);
     if (!file)
@@ -66,13 +70,61 @@ app_state load_state(const std::string& path)
 
         if (key == "last_track")
         {
-            state.last_track = value;
+            state.context.track_path = value;
         }
         else if (key == "last_position_ms")
         {
             try
             {
-                state.last_position_ms = std::stoi(value);
+                state.context.position_ms = std::stoi(value);
+            }
+            catch (...)
+            {
+            }
+        }
+        else if (key == "context_track_path")
+        {
+            state.context.track_path = value;
+        }
+        else if (key == "context_position_ms")
+        {
+            try
+            {
+                state.context.position_ms = std::stoi(value);
+            }
+            catch (...)
+            {
+            }
+        }
+        else if (key == "context_title")
+        {
+            state.context.title = value;
+        }
+        else if (key == "context_artist")
+        {
+            state.context.artist = value;
+        }
+        else if (key == "context_album")
+        {
+            state.context.album = value;
+        }
+        else if (key == "artist_path")
+        {
+            state.artist_path = value;
+        }
+        else if (key == "album_path")
+        {
+            state.album_path = value;
+        }
+        else if (key == "song_path")
+        {
+            state.song_path = value;
+        }
+        else if (key == "song_index")
+        {
+            try
+            {
+                state.song_index = std::stoi(value);
             }
             catch (...)
             {
@@ -91,6 +143,34 @@ void save_state(const std::string& path, const app_state& state)
         return;
     }
 
-    file << "last_track = \"" << state.last_track << "\"\n";
-    file << "last_position_ms = " << state.last_position_ms << "\n";
+    file << "last_track = \"" << state.context.track_path << "\"\n";
+    file << "last_position_ms = " << state.context.position_ms << "\n";
+    file << "context_track_path = \"" << state.context.track_path << "\"\n";
+    file << "context_position_ms = " << state.context.position_ms << "\n";
+    file << "context_title = \"" << state.context.title << "\"\n";
+    file << "context_artist = \"" << state.context.artist << "\"\n";
+    file << "context_album = \"" << state.context.album << "\"\n";
+    file << "artist_path = \"" << state.artist_path << "\"\n";
+    file << "album_path = \"" << state.album_path << "\"\n";
+    file << "song_path = \"" << state.song_path << "\"\n";
+    file << "song_index = " << state.song_index << "\n";
+}
+
+void app_state::apply_to_browsers(Browser& artist, Browser& album, Browser& song) const
+{
+    if (artist_path.empty())
+    {
+        return;
+    }
+
+    artist.set_path(artist_path);
+    if (!album_path.empty())
+    {
+        album.set_path(album_path);
+    }
+    if (!song_path.empty())
+    {
+        song.set_path(song_path);
+        song.set_selected_index(static_cast<size_t>(std::max(0, song_index)));
+    }
 }
