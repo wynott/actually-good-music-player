@@ -7,3 +7,4 @@ struct TerminalSize
 };
 
 TerminalSize get_terminal_size();
+void clear_screen_rgb(int r, int g, int b);

@@ -1,5 +1,8 @@
 #include "terminal.h"
 
+#include <iostream>
+#include <string>
+
 #if defined(_WIN32)
 #include <windows.h>
 #else
@@ -36,4 +39,53 @@ TerminalSize get_terminal_size()
 #endif
 
     return size;
+}
+
+void clear_screen_rgb(int r, int g, int b)
+{
+    TerminalSize size = get_terminal_size();
+    if (size.columns <= 0 || size.rows <= 0)
+    {
+        return;
+    }
+
+    if (r < 0)
+    {
+        r = 0;
+    }
+    if (r > 255)
+    {
+        r = 255;
+    }
+    if (g < 0)
+    {
+        g = 0;
+    }
+    if (g > 255)
+    {
+        g = 255;
+    }
+    if (b < 0)
+    {
+        b = 0;
+    }
+    if (b > 255)
+    {
+        b = 255;
+    }
+
+    std::string line(static_cast<size_t>(size.columns), ' ');
+    std::cout << "\x1b[2J\x1b[H";
+    std::cout << "\x1b[38;2;" << r << ";" << g << ";" << b << "m";
+    std::cout << "\x1b[48;2;" << r << ";" << g << ";" << b << "m";
+    for (int y = 0; y < size.rows; ++y)
+    {
+        std::cout << line;
+        if (y + 1 < size.rows)
+        {
+            std::cout << '\n';
+        }
+    }
+    std::cout << "\x1b[0m";
+    std::cout.flush();
 }
