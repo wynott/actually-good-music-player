@@ -184,7 +184,7 @@ void ActuallyGoodMP::run()
         {
         }
 
-        album_art.begin_fetch(player.get_current_track(), config, current_artist, current_album);
+        album_art.set_track(player.get_current_track(), config, current_artist, current_album);
 
         auto full_redraw = [&]()
         {
@@ -238,43 +238,7 @@ void ActuallyGoodMP::run()
             }
         };
 
-        if (!album_art.is_pending())
-        {
-            full_redraw();
-        }
-        else
-        {
-            experimental_artist_browser.draw();
-            experimental_album_browser.draw();
-            experimental_song_browser.draw();
-            {
-                glm::ivec2 min_corner = experimental_artist_browser.get_location();
-                glm::ivec2 max_corner = min_corner + experimental_artist_browser.get_size() - glm::ivec2(1);
-                Terminal::instance().write_region(min_corner, max_corner);
-            }
-            {
-                glm::ivec2 min_corner = experimental_album_browser.get_location();
-                glm::ivec2 max_corner = min_corner + experimental_album_browser.get_size() - glm::ivec2(1);
-                Terminal::instance().write_region(min_corner, max_corner);
-            }
-            {
-                glm::ivec2 min_corner = experimental_song_browser.get_location();
-                glm::ivec2 max_corner = min_corner + experimental_song_browser.get_size() - glm::ivec2(1);
-                Terminal::instance().write_region(min_corner, max_corner);
-            }
-            if (!config.safe_mode)
-            {
-                track_metadata meta;
-                if (read_track_metadata(player.get_current_track(), meta))
-                {
-                    draw_metadata_panel(config, meta, metadata_origin_x + 1, 3);
-                }
-            }
-            if (!status_base.empty())
-            {
-                draw_status_line(status_base);
-            }
-        }
+        full_redraw();
 
         if (!config.safe_mode)
         {
@@ -342,6 +306,7 @@ void ActuallyGoodMP::run()
             {
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
+            album_art.tick(config, art_origin_x, 0);
 
             int raw_key = input_poll_key();
             int key = raw_key;
@@ -367,103 +332,13 @@ void ActuallyGoodMP::run()
                     quit = true;
                 }
 
-                if (key == input_key_left)
-                {
-                    Browser* focused = experimental_artist_browser.get_focused_in_chain();
-
-                    if (focused)
-                    {
-                        Browser* left = focused->get_left();
-                        if (left)
-                        {
-                            focused->give_focus(left);
-                            focused->draw();
-                            left->draw();
-                            {
-                                glm::ivec2 min_corner = focused->get_location();
-                                glm::ivec2 max_corner = min_corner + focused->get_size() - glm::ivec2(1);
-                                Terminal::instance().write_region(min_corner, max_corner);
-                            }
-                            {
-                                glm::ivec2 min_corner = left->get_location();
-                                glm::ivec2 max_corner = min_corner + left->get_size() - glm::ivec2(1);
-                                Terminal::instance().write_region(min_corner, max_corner);
-                            }
-                        }
-                    }
-
-                }
-                if (key == input_key_right)
-                {
-                    Browser* focused = experimental_artist_browser.get_focused_in_chain();
-
-                    if (focused)
-                    {
-                        Browser* right = focused->get_right();
-                        if (right)
-                        {
-                            focused->give_focus(right);
-                            focused->draw();
-                            right->draw();
-                            {
-                                glm::ivec2 min_corner = focused->get_location();
-                                glm::ivec2 max_corner = min_corner + focused->get_size() - glm::ivec2(1);
-                                Terminal::instance().write_region(min_corner, max_corner);
-                            }
-                            {
-                                glm::ivec2 min_corner = right->get_location();
-                                glm::ivec2 max_corner = min_corner + right->get_size() - glm::ivec2(1);
-                                Terminal::instance().write_region(min_corner, max_corner);
-                            }
-                        }
-                    }
-
-                }
-                if (key == input_key_up || key == input_key_down)
-                {
-                    Browser* focused_browser = nullptr;
-                    if (experimental_artist_browser.is_focused())
-                    {
-                        focused_browser = &experimental_artist_browser;
-                    }
-                    else if (experimental_album_browser.is_focused())
-                    {
-                        focused_browser = &experimental_album_browser;
-                    }
-
-                    if (focused_browser != nullptr)
-                    {
-                        int direction = (key == input_key_up) ? -1 : 1;
-                        focused_browser->move_selection(direction);
-                        focused_browser->draw();
-                        glm::ivec2 min_corner = focused_browser->get_location();
-                        glm::ivec2 max_corner = min_corner + focused_browser->get_size() - glm::ivec2(1);
-                        Terminal::instance().write_region(min_corner, max_corner);
-
-                        Browser* right_browser = focused_browser->get_right();
-                        if (right_browser != nullptr)
-                        {
-                            right_browser->draw();
-                            glm::ivec2 right_min = right_browser->get_location();
-                            glm::ivec2 right_max = right_min + right_browser->get_size() - glm::ivec2(1);
-                            Terminal::instance().write_region(right_min, right_max);
-                        }
-                    }
-
-
-                }
+                experimental_artist_browser.update(key);
             }
 
-        if (album_art.consume_dirty())
-        {
-            full_redraw();
-        }
-
-            std::this_thread::sleep_for(std::chrono::milliseconds(16));
+        std::this_thread::sleep_for(std::chrono::milliseconds(16));
         }
 
         input_shutdown();
-        album_art.wait_for_fetch();
         http_cleanup();
         app_state save;
         save.last_track = player.get_current_track();

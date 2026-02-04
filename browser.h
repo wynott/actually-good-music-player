@@ -94,6 +94,8 @@ public:
     void move_selection(int direction);
     void soft_select();
     void resize_to_fit_contents();
+    void update(int key);
+    void redraw();
     void set_focused(bool focused);
     void receive_focus();
     void give_focus(Browser* target);
@@ -108,7 +110,6 @@ public:
     std::filesystem::path get_selected_path() const;
     void highlight_selected();
     bool is_focused() const;
-    Browser* get_focused_in_chain();
     Browser* get_left() const;
     Browser* get_right() const;
 

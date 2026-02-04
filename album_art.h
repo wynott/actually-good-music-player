@@ -40,18 +40,20 @@ public:
 
     glm::vec3 average_colour() const;
 
-    void begin_fetch(
+    void set_track(
         const std::string& path,
         const app_config& config,
         const std::string& artist,
         const std::string& album);
+    void tick(
+        const app_config& config,
+        int origin_x,
+        int origin_y);
     bool render_current(
         const app_config& config,
         int origin_x,
         int origin_y,
         app_config::rgb_color* out_avg_color);
-    bool consume_dirty();
-    bool is_pending() const;
     void wait_for_fetch();
 
 
@@ -64,6 +66,9 @@ private:
     std::atomic<bool> _dirty{false};
     std::atomic<bool> _pending{false};
     std::thread _thread;
+    std::string _current_track;
+    std::string _current_artist;
+    std::string _current_album;
 
 private:
     glm::ivec2 _location = glm::ivec2(0);

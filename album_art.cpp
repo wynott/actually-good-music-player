@@ -346,12 +346,21 @@ bool AlbumArt::load(const std::vector<unsigned char>& image_data)
     return load_image_data(image_data);
 }
 
-void AlbumArt::begin_fetch(
+void AlbumArt::set_track(
     const std::string& path,
     const app_config& config,
     const std::string& artist,
     const std::string& album)
 {
+    if (_current_track == path && _current_artist == artist && _current_album == album)
+    {
+        return;
+    }
+
+    _current_track = path;
+    _current_artist = artist;
+    _current_album = album;
+
     if (config.safe_mode)
     {
         _pending.store(false, std::memory_order_release);
@@ -399,6 +408,19 @@ void AlbumArt::begin_fetch(
             _pending.store(false, std::memory_order_release);
         });
     }
+}
+
+void AlbumArt::tick(
+    const app_config& config,
+    int origin_x,
+    int origin_y)
+{
+    if (!_dirty.exchange(false, std::memory_order_acq_rel))
+    {
+        return;
+    }
+
+    render_current(config, origin_x, origin_y, nullptr);
 }
 
 bool AlbumArt::render_current(
@@ -467,16 +489,6 @@ bool AlbumArt::render_current(
     Terminal::instance().write_region(min_corner, max_corner);
 
     return true;
-}
-
-bool AlbumArt::consume_dirty()
-{
-    return _dirty.exchange(false, std::memory_order_acq_rel);
-}
-
-bool AlbumArt::is_pending() const
-{
-    return _pending.load(std::memory_order_acquire);
 }
 
 void AlbumArt::wait_for_fetch()

@@ -4,6 +4,7 @@
 
 #include "browser.h"
 #include "draw.h"
+#include "input.h"
 #include "terminal.h"
 
 std::vector<browser_column::entry> list_entries(const std::filesystem::path& path)
@@ -288,6 +289,63 @@ void Browser::resize_to_fit_contents()
     }
 }
 
+void Browser::redraw()
+{
+    draw();
+    glm::ivec2 min_corner = get_location();
+    glm::ivec2 max_corner = min_corner + get_size() - glm::ivec2(1);
+    Terminal::instance().write_region(min_corner, max_corner);
+}
+
+void Browser::update(int key)
+{
+    Browser* head = this;
+    while (head->_left)
+    {
+        head = head->_left;
+    }
+
+    Browser* focused = head;
+    for (Browser* current = head; current; current = current->_right)
+    {
+        if (current->_is_focused)
+        {
+            focused = current;
+            break;
+        }
+    }
+
+    if (key == input_key_left)
+    {
+        Browser* left = focused->get_left();
+        if (left)
+        {
+            focused->give_focus(left);
+            focused->redraw();
+            left->redraw();
+        }
+        return;
+    }
+
+    if (key == input_key_right)
+    {
+        Browser* right = focused->get_right();
+        if (right)
+        {
+            focused->give_focus(right);
+            focused->redraw();
+            right->redraw();
+        }
+        return;
+    }
+
+    if (key == input_key_up || key == input_key_down)
+    {
+        int direction = (key == input_key_up) ? -1 : 1;
+        focused->move_selection(direction);
+    }
+}
+
 void Browser::set_focused(bool focused)
 {
     _is_focused = focused;
@@ -358,27 +416,6 @@ std::filesystem::path Browser::get_selected_path() const
 bool Browser::is_focused() const
 {
     return _is_focused;
-}
-
-Browser* Browser::get_focused_in_chain()
-{
-    Browser* head = this;
-    while (head->_left)
-    {
-        head = head->_left;
-    }
-
-    Browser* current = head;
-    while (current)
-    {
-        if (current->_is_focused)
-        {
-            return current;
-        }
-        current = current->_right;
-    }
-
-    return nullptr;
 }
 
 Browser* Browser::get_left() const
