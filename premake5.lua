@@ -12,8 +12,6 @@ project "agmp"
     files {
         "album_art.cpp",
         "album_art.h",
-        "art_render.cpp",
-        "art_render.h",
         "config.cpp",
         "config.h",
         "browser.cpp",
@@ -35,7 +33,7 @@ project "agmp"
         "net.h",
         "terminal.cpp",
         "terminal.h",
-        "player.c",
+        "player.cpp",
         "player.h",
         "miniaudio.h"
     }

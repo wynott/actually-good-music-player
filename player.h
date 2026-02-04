@@ -1,17 +1,21 @@
 #pragma once
+#pragma once
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include <string>
 
-int agmp_play_file(const char* path);
-int agmp_start_playback(const char* path);
-void agmp_stop_playback();
-void agmp_toggle_pause();
-int agmp_is_done();
-int agmp_get_position_ms();
-void agmp_seek_ms(int position_ms);
+class Player
+{
+public:
+    int play_file(const std::string& path);
+    int start_playback(const std::string& path);
+    void stop_playback();
+    void toggle_pause();
+    bool is_done() const;
+    int get_position_ms() const;
+    void seek_ms(int position_ms);
+    void set_current_track(const std::string& path);
+    const std::string& get_current_track() const;
 
-#ifdef __cplusplus
-}
-#endif
+private:
+    std::string _current_track;
+};

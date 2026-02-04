@@ -104,6 +104,24 @@ static bool vec3_equal(const glm::vec3& a, const glm::vec3& b)
     return a.x == b.x && a.y == b.y && a.z == b.z;
 }
 
+static bool is_empty_glyph(const Terminal::Character& value)
+{
+    static const glm::vec3 kDefaultColour(0.0f);
+    if (value.get_glyph() != U' ')
+    {
+        return false;
+    }
+    if (!vec3_equal(value.get_foreground_colour(), kDefaultColour))
+    {
+        return false;
+    }
+    if (!vec3_equal(value.get_background_colour(), kDefaultColour))
+    {
+        return false;
+    }
+    return true;
+}
+
 static std::string encode_utf8_char(char32_t value)
 {
     std::string output;
@@ -197,31 +215,23 @@ char32_t Terminal::Character::get_glyph() const
 void Terminal::Character::set_foreground_colour(const glm::vec3& colour)
 {
     _foreground_colour = colour;
+    dirty = true;
 }
 
 void Terminal::Character::set_background_colour(const glm::vec3& colour)
 {
     _background_colour = colour;
-}
-
-void Terminal::Character::set_inverted(bool inverted)
-{
-    _is_inverted = inverted;
+    dirty = true;
 }
 
 const glm::vec3& Terminal::Character::get_foreground_colour() const
 {
-    return _is_inverted ? _background_colour : _foreground_colour;
+    return _foreground_colour;
 }
 
 const glm::vec3& Terminal::Character::get_background_colour() const
 {
-    return _is_inverted ? _foreground_colour : _background_colour;
-}
-
-bool Terminal::Character::is_inverted() const
-{
-    return _is_inverted;
+    return _background_colour;
 }
 
 void Terminal::on_terminal_resize()
@@ -232,6 +242,7 @@ void Terminal::on_terminal_resize()
         _size = size;
         _buffer.assign(static_cast<size_t>(_size.x * _size.y), Character{});
         _actual_state.assign(static_cast<size_t>(_size.x * _size.y), Character{});
+        _canvas.assign(static_cast<size_t>(_size.x * _size.y), Character{});
         _has_current_colours = false;
     }
 }
@@ -239,6 +250,29 @@ void Terminal::on_terminal_resize()
 glm::ivec2 Terminal::get_size() const
 {
     return _size;
+}
+
+glm::ivec2 Terminal::get_location(size_t buffer_index) const
+{
+    if (_size.x <= 0)
+    {
+        return glm::ivec2(0);
+    }
+
+    int width = _size.x;
+    int y = static_cast<int>(buffer_index / static_cast<size_t>(width));
+    int x = static_cast<int>(buffer_index % static_cast<size_t>(width));
+    return glm::ivec2(x, y);
+}
+
+size_t Terminal::get_index(const glm::ivec2& location) const
+{
+    if (_size.x <= 0)
+    {
+        return 0;
+    }
+
+    return static_cast<size_t>(location.y * _size.x + location.x);
 }
 
 const std::vector<Terminal::Character>& Terminal::get_buffer() const
@@ -251,6 +285,33 @@ std::vector<Terminal::Character>& Terminal::mutate_buffer()
     return _buffer;
 }
 
+const std::vector<Terminal::Character>& Terminal::get_canvas() const
+{
+    return _canvas;
+}
+
+std::vector<Terminal::Character>& Terminal::mutate_canvas()
+{
+    return _canvas;
+}
+
+glm::vec3 Terminal::get_canvas_colour(const glm::ivec2& location) const
+{
+    if (location.x < 0 || location.y < 0 || location.x >= _size.x || location.y >= _size.y)
+    {
+        return glm::vec3(0.0f);
+    }
+
+    size_t index = get_index(location);
+    if (index >= _canvas.size())
+    {
+        return glm::vec3(0.0f);
+    }
+
+    const Character& cell = _canvas[index];
+    return cell.get_background_colour();
+}
+
 void Terminal::scan_and_write_characters()
 {
     if (_size.x <= 0)
@@ -258,17 +319,14 @@ void Terminal::scan_and_write_characters()
         return;
     }
 
-    int width = _size.x;
     for (size_t index = 0; index < _buffer.size(); ++index)
     {
-        if (!_buffer[index].dirty)
+        if (!_buffer[index].dirty && !_canvas[index].dirty)
         {
             continue;
         }
 
-        int y = static_cast<int>(index / static_cast<size_t>(width));
-        int x = static_cast<int>(index % static_cast<size_t>(width));
-        write_character_to_terminal(glm::ivec2(x, y));
+        write_character_to_terminal(get_location(index));
     }
 }
 
@@ -303,8 +361,10 @@ void Terminal::write_character_to_terminal(const glm::ivec2& location)
         return;
     }
 
-    size_t index = static_cast<size_t>(location.y * _size.x + location.x);
-    Character& desired = _buffer[index];
+    size_t index = get_index(location);
+    Character& buffer_cell = _buffer[index];
+    Character& background_cell = _canvas[index];
+    Character& desired = is_empty_glyph(buffer_cell) ? background_cell : buffer_cell;
     const Character& actual = _actual_state[index];
 
     if (desired.get_glyph() == actual.get_glyph()
@@ -363,7 +423,15 @@ void Terminal::write_character_to_terminal(const glm::ivec2& location)
 
     sequence += encode_utf8_char(desired.get_glyph());
     _actual_state[index] = desired;
-    desired.dirty = false;
+    if (&desired == &background_cell)
+    {
+        background_cell.dirty = false;
+        buffer_cell.dirty = false;
+    }
+    else
+    {
+        buffer_cell.dirty = false;
+    }
 
     std::cout << sequence;
     std::cout.flush();
@@ -379,12 +447,12 @@ void Terminal::write_string_to_terminal(const glm::ivec2& location, std::size_t 
     if (_actual_state.size() != _buffer.size())
     {
         _actual_state.assign(_buffer.size(), Character{});
+        _canvas.assign(_buffer.size(), Character{});
         _has_current_colours = false;
     }
 
-    int width = _size.x;
-    size_t start_index = static_cast<size_t>(location.y * width + location.x);
-    size_t remaining_in_row = static_cast<size_t>(width - location.x);
+    size_t start_index = get_index(location);
+    size_t remaining_in_row = static_cast<size_t>(_size.x - location.x);
     size_t max_count = remaining_in_row;
     if (start_index + max_count > _buffer.size())
     {
@@ -397,41 +465,15 @@ void Terminal::write_string_to_terminal(const glm::ivec2& location, std::size_t 
         return;
     }
 
-    bool any_dirty = false;
-    for (size_t offset = 0; offset < count; ++offset)
-    {
-        const Character& desired = _buffer[start_index + offset];
-        const Character& actual = _actual_state[start_index + offset];
-        if (desired.get_glyph() != actual.get_glyph()
-            || !vec3_equal(desired.get_foreground_colour(), actual.get_foreground_colour())
-            || !vec3_equal(desired.get_background_colour(), actual.get_background_colour()))
-        {
-            any_dirty = true;
-            break;
-        }
-    }
-
-    if (!any_dirty)
-    {
-        return;
-    }
-
     std::string sequence;
     sequence.reserve(64 + count * 12);
 
     for (size_t offset = 0; offset < count; ++offset)
     {
         size_t index = start_index + offset;
-        Character& desired = _buffer[index];
-        const Character& actual = _actual_state[index];
-
-        if (desired.get_glyph() == actual.get_glyph()
-            && vec3_equal(desired.get_foreground_colour(), actual.get_foreground_colour())
-            && vec3_equal(desired.get_background_colour(), actual.get_background_colour()))
-        {
-            continue;
-        }
-
+        Character& buffer_cell = _buffer[index];
+        Character& background_cell = _canvas[index];
+        Character& desired = is_empty_glyph(buffer_cell) ? background_cell : buffer_cell;
         glm::vec3 desired_foreground = desired.get_foreground_colour();
         glm::vec3 desired_background = desired.get_background_colour();
 
@@ -455,9 +497,8 @@ void Terminal::write_string_to_terminal(const glm::ivec2& location, std::size_t 
             bg_max = desired_background.z;
         }
 
-        int x = location.x + static_cast<int>(offset);
-        int y = location.y;
-        sequence += "\x1b[" + std::to_string(y + 1) + ";" + std::to_string(x + 1) + "H";
+        glm::ivec2 cell_location = get_location(index);
+        sequence += "\x1b[" + std::to_string(cell_location.y + 1) + ";" + std::to_string(cell_location.x + 1) + "H";
 
         if (!_has_current_colours || !vec3_equal(desired_foreground, _current_foreground_colour))
         {
@@ -481,7 +522,15 @@ void Terminal::write_string_to_terminal(const glm::ivec2& location, std::size_t 
 
         sequence += encode_utf8_char(desired.get_glyph());
         _actual_state[index] = desired;
-        desired.dirty = false;
+        if (&desired == &background_cell)
+        {
+            background_cell.dirty = false;
+            buffer_cell.dirty = false;
+        }
+        else
+        {
+            buffer_cell.dirty = false;
+        }
     }
 
     if (!sequence.empty())

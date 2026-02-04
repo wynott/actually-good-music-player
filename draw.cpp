@@ -120,15 +120,48 @@ Renderer& Renderer::instance()
     return renderer;
 }
 
-void Renderer::clear_screen(const glm::vec3& colour)
+void Renderer::set_box_colour(const glm::vec3& colour)
+{
+    _box_colour = colour;
+}
+
+void Renderer::set_text_colour(const glm::vec3& colour)
+{
+    _text_colour = colour;
+}
+
+void Renderer::set_canvas(const glm::vec3& colour)
 {
     (void)colour;
 
-    std::vector<Terminal::Character>& buffer = _terminal.mutate_buffer();
-    for (Terminal::Character& cell : buffer)
+    glm::ivec2 size = _terminal.get_size();
+    if (size.x <= 0 || size.y <= 0)
     {
-        cell.set_glyph(U'█');
+        return;
     }
+
+    std::vector<Terminal::Character>& background = _terminal.mutate_canvas();
+    int width = size.x;
+    int height = size.y;
+    for (int y = 0; y < height; ++y)
+    {
+        float t = (height > 1) ? static_cast<float>(y) / static_cast<float>(height - 1) : 0.0f;
+        float shade = 0.25f + (0.5f - 0.25f) * t;
+        glm::vec3 colour_vec(shade * 255.0f, shade * 255.0f, shade * 255.0f);
+        for (int x = 0; x < width; ++x)
+        {
+            size_t index = static_cast<size_t>(y * width + x);
+            if (index >= background.size())
+            {
+                continue;
+            }
+            Terminal::Character& cell = background[index];
+            cell.set_glyph(U'█');
+            cell.set_foreground_colour(colour_vec);
+            cell.set_background_colour(colour_vec);
+        }
+    }
+
 }
 
 void Renderer::draw_box(const glm::ivec2& min_corner, const glm::ivec2& size)
@@ -170,6 +203,8 @@ void Renderer::draw_box(const glm::ivec2& min_corner, const glm::ivec2& size)
         }
 
         buffer[index].set_glyph(glyph);
+        buffer[index].set_foreground_colour(_box_colour);
+        buffer[index].set_background_colour(_terminal.get_canvas_colour(glm::ivec2(x, y)));
     };
 
     if (min_x == max_x && min_y == max_y)
@@ -271,7 +306,57 @@ void Renderer::draw_string(const std::string& text, const glm::ivec2& location)
             break;
         }
 
+        glm::ivec2 cell_location(start_x, y);
         buffer[index].set_glyph(static_cast<char32_t>(static_cast<unsigned char>(text[i])));
+        buffer[index].set_foreground_colour(_text_colour);
+        buffer[index].set_background_colour(_terminal.get_canvas_colour(cell_location));
+    }
+}
+
+void Renderer::draw_string_selected(const std::string& text, const glm::ivec2& location)
+{
+    if (text.empty())
+    {
+        return;
+    }
+
+    glm::ivec2 terminal_size = _terminal.get_size();
+    if (terminal_size.x <= 0 || terminal_size.y <= 0)
+    {
+        return;
+    }
+
+    int y = location.y;
+    if (y < 0 || y >= terminal_size.y)
+    {
+        return;
+    }
+
+    int x = location.x;
+    if (x >= terminal_size.x)
+    {
+        return;
+    }
+
+    int start_x = std::max(0, x);
+    size_t skip = (x < 0) ? static_cast<size_t>(-x) : 0u;
+
+    std::vector<Terminal::Character>& buffer = _terminal.mutate_buffer();
+    int width = terminal_size.x;
+    size_t index = static_cast<size_t>(y * width + start_x);
+
+    for (size_t i = skip; i < text.size() && start_x < terminal_size.x; ++i, ++start_x, ++index)
+    {
+        if (index >= buffer.size())
+        {
+            break;
+        }
+
+        glm::ivec2 cell_location(start_x, y);
+        Terminal::Character& cell = buffer[index];
+        cell.set_glyph(static_cast<char32_t>(static_cast<unsigned char>(text[i])));
+        cell.set_foreground_colour(_terminal.get_canvas_colour(cell_location));
+        cell.set_background_colour(_text_colour);
     }
 }
 

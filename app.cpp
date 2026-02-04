@@ -1,13 +1,10 @@
 #include "app.h"
 
-#include <atomic>
 #include <chrono>
 #include <iostream>
-#include <mutex>
 #include <string>
-#include <thread>
 
-#include "art_render.h"
+#include "album_art.h"
 #include "browser.h"
 #include "config.h"
 #include "draw.h"
@@ -156,7 +153,54 @@ void ActuallyGoodMP::run()
         }
         const char* default_track = config.default_track.c_str();
 
-        Browser demo_browser("Browser", config.library_path, glm::ivec2(2, 2), glm::ivec2(32, 12));
+        int experimental_gap = 6;
+        int experimental_offset = 25;
+        glm::ivec2 experimental_origin(experimental_offset, experimental_offset);
+        glm::ivec2 experimental_artist_size(std::max(1, config.col_width_artist + 2), 12);
+        glm::ivec2 experimental_album_size(std::max(1, config.col_width_album + 2), 12);
+        glm::ivec2 experimental_song_size(std::max(1, config.col_width_song + 2), 12);
+        Browser experimental_artist_browser(
+            "Artist",
+            config.library_path,
+            experimental_origin,
+            experimental_artist_size);
+        Browser experimental_album_browser(
+            "Album",
+            config.library_path,
+            glm::ivec2(experimental_origin.x + experimental_artist_size.x + experimental_gap, experimental_origin.y),
+            experimental_album_size);
+        Browser experimental_song_browser(
+            "Song",
+            config.library_path,
+            glm::ivec2(
+                experimental_origin.x + experimental_artist_size.x + experimental_gap + experimental_album_size.x + experimental_gap,
+                experimental_origin.y),
+            experimental_song_size);
+        experimental_artist_browser.set_right(&experimental_album_browser);
+        experimental_album_browser.set_left(&experimental_artist_browser);
+        experimental_album_browser.set_right(&experimental_song_browser);
+        experimental_song_browser.set_left(&experimental_album_browser);
+        experimental_artist_browser.set_focused(true);
+        experimental_artist_browser.soft_select();
+
+        Renderer::instance().set_canvas(glm::vec3(0.0f));
+        Renderer::instance().set_box_colour(glm::vec3(
+            static_cast<float>(config.ui_box_fg.r),
+            static_cast<float>(config.ui_box_fg.g),
+            static_cast<float>(config.ui_box_fg.b)));
+        Renderer::instance().set_text_colour(glm::vec3(
+            static_cast<float>(config.ui_text_fg.r),
+            static_cast<float>(config.ui_text_fg.g),
+            static_cast<float>(config.ui_text_fg.b)));
+        {
+            glm::ivec2 size = Terminal::instance().get_size();
+            if (size.x > 0 && size.y > 0)
+            {
+                Terminal::instance().write_region(glm::ivec2(0, 0), glm::ivec2(size.x - 1, size.y - 1));
+            }
+        }
+        AlbumArt album_art;
+        Player player;
 
         int box_gap = 2;
         int art_origin_x = 0;
@@ -233,18 +277,18 @@ void ActuallyGoodMP::run()
             draw_status_line(status_base);
         }
 
-        std::string current_track = default_track;
+        player.set_current_track(default_track);
         app_state state = load_state("state.toml");
         if (config.auto_resume_playback && !state.last_track.empty())
         {
-            current_track = state.last_track;
+            player.set_current_track(state.last_track);
         }
 
         std::string current_artist;
         std::string current_album;
         try
         {
-            std::filesystem::path track_path(current_track);
+            std::filesystem::path track_path(player.get_current_track());
             if (track_path.has_parent_path())
             {
                 current_album = track_path.parent_path().filename().string();
@@ -261,58 +305,7 @@ void ActuallyGoodMP::run()
         std::string search_query;
         bool search_active = false;
 
-        art_result art_state;
-        std::mutex art_mutex;
-        std::atomic<bool> art_dirty(false);
-        std::thread art_thread;
-        bool art_pending = false;
-
-        auto begin_art_fetch = [&]()
-        {
-            if (config.safe_mode)
-            {
-                art_pending = false;
-                return;
-            }
-            if (art_thread.joinable())
-            {
-                art_thread.join();
-            }
-
-            art_state = start_album_art_fetch(current_track.c_str(), config, current_artist, current_album);
-            art_pending = !art_state.ready;
-            if (art_state.ready)
-            {
-                art_dirty.store(true, std::memory_order_release);
-            }
-
-            if (!art_state.ready && config.enable_online_art)
-            {
-                std::string artist_copy = current_artist;
-                std::string album_copy = current_album;
-                art_thread = std::thread([&]()
-                {
-                    try
-                    {
-                        art_result local = art_state;
-                        complete_album_art_fetch(local, config, artist_copy, album_copy);
-                        {
-                            std::lock_guard<std::mutex> lock(art_mutex);
-                            art_state = std::move(local);
-                        }
-                        art_dirty.store(true, std::memory_order_release);
-                    }
-                    catch (const std::exception& ex)
-                    {
-                        spdlog::error("art thread error: {}", ex.what());
-                    }
-                    catch (...)
-                    {
-                        spdlog::error("art thread unknown error");
-                    }
-                });
-            }
-        };
+        album_art.begin_fetch(player.get_current_track(), config, current_artist, current_album);
 
         auto full_redraw = [&]()
         {
@@ -324,13 +317,7 @@ void ActuallyGoodMP::run()
             }
             else
             {
-                art_result snapshot;
-                {
-                    std::lock_guard<std::mutex> lock(art_mutex);
-                    snapshot = art_state;
-                }
-                bool rendered = render_album_art(
-                    snapshot,
+                bool rendered = album_art.render_current(
                     config,
                     art_origin_x,
                     0,
@@ -354,16 +341,28 @@ void ActuallyGoodMP::run()
             prev_artist_rows = artist_rows;
             prev_album_rows = album_rows;
             prev_song_rows = song_rows;
-            demo_browser.draw();
+            experimental_artist_browser.draw();
+            experimental_album_browser.draw();
+            experimental_song_browser.draw();
             {
-                glm::ivec2 min_corner = demo_browser.get_location();
-                glm::ivec2 max_corner = min_corner + demo_browser.get_size() - glm::ivec2(1);
+                glm::ivec2 min_corner = experimental_artist_browser.get_location();
+                glm::ivec2 max_corner = min_corner + experimental_artist_browser.get_size() - glm::ivec2(1);
+                Terminal::instance().write_region(min_corner, max_corner);
+            }
+            {
+                glm::ivec2 min_corner = experimental_album_browser.get_location();
+                glm::ivec2 max_corner = min_corner + experimental_album_browser.get_size() - glm::ivec2(1);
+                Terminal::instance().write_region(min_corner, max_corner);
+            }
+            {
+                glm::ivec2 min_corner = experimental_song_browser.get_location();
+                glm::ivec2 max_corner = min_corner + experimental_song_browser.get_size() - glm::ivec2(1);
                 Terminal::instance().write_region(min_corner, max_corner);
             }
             if (!config.safe_mode)
             {
                 track_metadata meta;
-                if (read_track_metadata(current_track, meta))
+                if (read_track_metadata(player.get_current_track(), meta))
                 {
                     draw_metadata_panel(config, meta, metadata_origin_x + 1, 3);
                 }
@@ -381,24 +380,35 @@ void ActuallyGoodMP::run()
             }
         };
 
-        begin_art_fetch();
-        if (!art_pending)
+        if (!album_art.is_pending())
         {
             full_redraw();
         }
         else
         {
             draw_browsers(config, artist, album, song, active_column);
-            demo_browser.draw();
+            experimental_artist_browser.draw();
+            experimental_album_browser.draw();
+            experimental_song_browser.draw();
             {
-                glm::ivec2 min_corner = demo_browser.get_location();
-                glm::ivec2 max_corner = min_corner + demo_browser.get_size() - glm::ivec2(1);
+                glm::ivec2 min_corner = experimental_artist_browser.get_location();
+                glm::ivec2 max_corner = min_corner + experimental_artist_browser.get_size() - glm::ivec2(1);
+                Terminal::instance().write_region(min_corner, max_corner);
+            }
+            {
+                glm::ivec2 min_corner = experimental_album_browser.get_location();
+                glm::ivec2 max_corner = min_corner + experimental_album_browser.get_size() - glm::ivec2(1);
+                Terminal::instance().write_region(min_corner, max_corner);
+            }
+            {
+                glm::ivec2 min_corner = experimental_song_browser.get_location();
+                glm::ivec2 max_corner = min_corner + experimental_song_browser.get_size() - glm::ivec2(1);
                 Terminal::instance().write_region(min_corner, max_corner);
             }
             if (!config.safe_mode)
             {
                 track_metadata meta;
-                if (read_track_metadata(current_track, meta))
+                if (read_track_metadata(player.get_current_track(), meta))
                 {
                     draw_metadata_panel(config, meta, metadata_origin_x + 1, 3);
                 }
@@ -412,7 +422,7 @@ void ActuallyGoodMP::run()
         if (!config.safe_mode)
         {
             track_metadata initial_meta;
-            if (read_track_metadata(current_track, initial_meta) && initial_meta.duration_ms > 0)
+            if (read_track_metadata(player.get_current_track(), initial_meta) && initial_meta.duration_ms > 0)
             {
                 if (state.last_position_ms >= initial_meta.duration_ms)
                 {
@@ -423,19 +433,19 @@ void ActuallyGoodMP::run()
 
         auto start_playback_or_fallback = [&]() -> bool
         {
-            if (agmp_start_playback(current_track.c_str()) == 0)
+            if (player.start_playback(player.get_current_track()) == 0)
             {
                 return true;
             }
 
-            if (current_track != default_track)
+            if (player.get_current_track() != default_track)
             {
-                current_track = default_track;
+                player.set_current_track(default_track);
                 current_artist.clear();
                 current_album.clear();
                 try
                 {
-                    std::filesystem::path track_path(current_track);
+                    std::filesystem::path track_path(player.get_current_track());
                     if (track_path.has_parent_path())
                     {
                         current_album = track_path.parent_path().filename().string();
@@ -449,7 +459,7 @@ void ActuallyGoodMP::run()
                 {
                 }
 
-                return agmp_start_playback(current_track.c_str()) == 0;
+                return player.start_playback(player.get_current_track()) == 0;
             }
 
             return false;
@@ -457,9 +467,9 @@ void ActuallyGoodMP::run()
 
         bool playback_active = start_playback_or_fallback();
         bool playback_failed = !playback_active;
-        if (config.auto_resume_playback && playback_active && state.last_position_ms > 0 && current_track == state.last_track)
+        if (config.auto_resume_playback && playback_active && state.last_position_ms > 0 && player.get_current_track() == state.last_track)
         {
-            agmp_seek_ms(state.last_position_ms);
+            player.seek_ms(state.last_position_ms);
         }
         if (playback_failed)
         {
@@ -471,22 +481,22 @@ void ActuallyGoodMP::run()
         bool dirty = false;
         while (!quit)
         {
-            if (playback_active && agmp_is_done())
+            if (playback_active && player.is_done())
             {
                 if (song.selected_index >= 0 && song.selected_index + 1 < static_cast<int>(song.entries.size()))
                 {
                     song.selected_index += 1;
-                    current_track = song.entries[song.selected_index].path.string();
+                    player.set_current_track(song.entries[song.selected_index].path.string());
                     current_album = album.selected_index >= 0 ? album.entries[album.selected_index].name : "";
                     current_artist = artist.selected_index >= 0 ? artist.entries[artist.selected_index].name : "";
-                    agmp_stop_playback();
-                    playback_active = agmp_start_playback(current_track.c_str()) == 0;
+                    player.stop_playback();
+                    playback_active = player.start_playback(player.get_current_track()) == 0;
                     playback_failed = !playback_active;
                     if (playback_failed)
                     {
                         draw_status_line("Playback failed");
                     }
-                    begin_art_fetch();
+                    album_art.begin_fetch(player.get_current_track(), config, current_artist, current_album);
                     full_redraw();
                 }
                 else
@@ -516,7 +526,7 @@ void ActuallyGoodMP::run()
                 {
                     if (ch == pause_key)
                     {
-                        agmp_toggle_pause();
+                        player.toggle_pause();
                     }
                     if (ch == quit_key)
                     {
@@ -569,10 +579,7 @@ void ActuallyGoodMP::run()
                             if (layout_changed)
                             {
                                 full_redraw();
-                                if (art_thread.joinable())
-                                {
-                                    art_thread.join();
-                                }
+                                album_art.wait_for_fetch();
                             }
                             if (previous >= 0 && previous < artist_rows)
                             {
@@ -654,18 +661,18 @@ void ActuallyGoodMP::run()
                         }
                         else if (!selected.is_dir)
                         {
-                            current_track = selected.path.string();
+                            player.set_current_track(selected.path.string());
                             current_album = album.selected_index >= 0 ? album.entries[album.selected_index].name : "";
                             current_artist = artist.selected_index >= 0 ? artist.entries[artist.selected_index].name : "";
-                            agmp_stop_playback();
-                            playback_active = agmp_start_playback(current_track.c_str()) == 0;
+                            player.stop_playback();
+                            playback_active = player.start_playback(player.get_current_track()) == 0;
                             playback_failed = !playback_active;
                             if (playback_failed)
                             {
                                 draw_status_line("Playback failed");
                             }
-                            begin_art_fetch();
-                            if (!art_pending)
+                            album_art.begin_fetch(player.get_current_track(), config, current_artist, current_album);
+                            if (!album_art.is_pending())
                             {
                                 full_redraw();
                             }
@@ -675,7 +682,7 @@ void ActuallyGoodMP::run()
                                 if (!config.safe_mode)
                                 {
                                     track_metadata meta;
-                                    if (read_track_metadata(current_track, meta))
+                                    if (read_track_metadata(player.get_current_track(), meta))
                                     {
                                         draw_metadata_panel(config, meta, metadata_origin_x + 1, 3);
                                     }
@@ -690,16 +697,91 @@ void ActuallyGoodMP::run()
                 }
                 if (key == input_key_left)
                 {
+                    Browser* focused = experimental_artist_browser.get_focused_in_chain();
+
+                    if (focused)
+                    {
+                        Browser* left = focused->get_left();
+                        if (left)
+                        {
+                            focused->give_focus(left);
+                            focused->draw();
+                            left->draw();
+                            {
+                                glm::ivec2 min_corner = focused->get_location();
+                                glm::ivec2 max_corner = min_corner + focused->get_size() - glm::ivec2(1);
+                                Terminal::instance().write_region(min_corner, max_corner);
+                            }
+                            {
+                                glm::ivec2 min_corner = left->get_location();
+                                glm::ivec2 max_corner = min_corner + left->get_size() - glm::ivec2(1);
+                                Terminal::instance().write_region(min_corner, max_corner);
+                            }
+                        }
+                    }
+
                     active_column = std::max(0, active_column - 1);
                     dirty = true;
                 }
                 if (key == input_key_right)
                 {
+                    Browser* focused = experimental_artist_browser.get_focused_in_chain();
+
+                    if (focused)
+                    {
+                        Browser* right = focused->get_right();
+                        if (right)
+                        {
+                            focused->give_focus(right);
+                            focused->draw();
+                            right->draw();
+                            {
+                                glm::ivec2 min_corner = focused->get_location();
+                                glm::ivec2 max_corner = min_corner + focused->get_size() - glm::ivec2(1);
+                                Terminal::instance().write_region(min_corner, max_corner);
+                            }
+                            {
+                                glm::ivec2 min_corner = right->get_location();
+                                glm::ivec2 max_corner = min_corner + right->get_size() - glm::ivec2(1);
+                                Terminal::instance().write_region(min_corner, max_corner);
+                            }
+                        }
+                    }
+
                     active_column = std::min(2, active_column + 1);
                     dirty = true;
                 }
                 if (key == input_key_up || key == input_key_down)
                 {
+                    Browser* focused_browser = nullptr;
+                    if (experimental_artist_browser.is_focused())
+                    {
+                        focused_browser = &experimental_artist_browser;
+                    }
+                    else if (experimental_album_browser.is_focused())
+                    {
+                        focused_browser = &experimental_album_browser;
+                    }
+
+                    if (focused_browser != nullptr)
+                    {
+                        int direction = (key == input_key_up) ? -1 : 1;
+                        focused_browser->move_selection(direction);
+                        focused_browser->draw();
+                        glm::ivec2 min_corner = focused_browser->get_location();
+                        glm::ivec2 max_corner = min_corner + focused_browser->get_size() - glm::ivec2(1);
+                        Terminal::instance().write_region(min_corner, max_corner);
+
+                        Browser* right_browser = focused_browser->get_right();
+                        if (right_browser != nullptr)
+                        {
+                            right_browser->draw();
+                            glm::ivec2 right_min = right_browser->get_location();
+                            glm::ivec2 right_max = right_min + right_browser->get_size() - glm::ivec2(1);
+                            Terminal::instance().write_region(right_min, right_max);
+                        }
+                    }
+
                     int direction = (key == input_key_up) ? -1 : 1;
                     browser_column* target = nullptr;
                     if (active_column == 0)
@@ -769,11 +851,10 @@ void ActuallyGoodMP::run()
                 }
             }
 
-            if (art_dirty.exchange(false, std::memory_order_acq_rel))
-            {
-                art_pending = false;
-                full_redraw();
-            }
+        if (album_art.consume_dirty())
+        {
+            full_redraw();
+        }
 
             if (dirty)
             {
@@ -816,16 +897,13 @@ void ActuallyGoodMP::run()
         }
 
         input_shutdown();
-        if (art_thread.joinable())
-        {
-            art_thread.join();
-        }
+        album_art.wait_for_fetch();
         http_cleanup();
         app_state save;
-        save.last_track = current_track;
-        save.last_position_ms = agmp_get_position_ms();
+        save.last_track = player.get_current_track();
+        save.last_position_ms = player.get_position_ms();
         save_state("state.toml", save);
-        agmp_stop_playback();
+        player.stop_playback();
         stop_network();
         std::cout << "\x1b[2J\x1b[H\x1b[0m";
         std::cout.flush();

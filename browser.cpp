@@ -4,6 +4,7 @@
 
 #include "browser.h"
 #include "draw.h"
+#include "terminal.h"
 
 std::vector<browser_column::entry> list_entries(const std::filesystem::path& path)
 {
@@ -110,10 +111,82 @@ void Browser::set_name(const std::string& name)
     _name = name;
 }
 
+BrowserItem::BrowserItem(Browser* owner, const std::string& name, const std::filesystem::path& path)
+    : _owner(owner),
+      _name(name),
+      _path(path)
+{
+}
+
+const std::string& BrowserItem::get_name() const
+{
+    return _name;
+}
+
+const std::filesystem::path& BrowserItem::get_path() const
+{
+    return _path;
+}
+
+Browser* BrowserItem::get_owner() const
+{
+    return _owner;
+}
+
+FolderItem::FolderItem(Browser* owner, const std::string& name, const std::filesystem::path& path)
+    : BrowserItem(owner, name, path)
+{
+}
+
+void FolderItem::on_soft_select()
+{
+    Browser* owner = get_owner();
+    if (owner == nullptr)
+    {
+        return;
+    }
+
+    Browser* right = owner->get_right();
+    if (right == nullptr)
+    {
+        return;
+    }
+
+    right->set_path(get_path());
+    right->soft_select();
+    right->draw();
+    {
+        glm::ivec2 min_corner = right->get_location();
+        glm::ivec2 max_corner = min_corner + right->get_size() - glm::ivec2(1);
+        Terminal::instance().write_region(min_corner, max_corner);
+    }
+}
+
+void FolderItem::on_select()
+{
+}
+
+
+Mp3Item::Mp3Item(Browser* owner, const std::string& name, const std::filesystem::path& path)
+    : BrowserItem(owner, name, path)
+{
+}
+
+void Mp3Item::on_soft_select()
+{
+}
+
+void Mp3Item::on_select()
+{
+}
+
+
 void Browser::set_path(const std::filesystem::path& path)
 {
     _path = path;
     refresh_contents();
+    set_selected_index(0);
+    soft_select();
 }
 
 void Browser::set_selected_index(size_t index)
@@ -129,6 +202,121 @@ void Browser::set_selected_index(size_t index)
     {
         _selected_index = _contents.size() - 1;
     }
+}
+
+void Browser::move_selection(int direction)
+{
+    if (!_is_focused)
+    {
+        return;
+    }
+
+    if (_contents.empty())
+    {
+        _selected_index = 0;
+        return;
+    }
+
+    int next = static_cast<int>(_selected_index) + direction;
+    next = std::clamp(next, 0, static_cast<int>(_contents.size() - 1));
+    set_selected_index(static_cast<size_t>(next));
+
+    draw();
+    {
+        glm::ivec2 min_corner = get_location();
+        glm::ivec2 max_corner = min_corner + get_size() - glm::ivec2(1);
+        Terminal::instance().write_region(min_corner, max_corner);
+    }
+
+    if (_right)
+    {
+        soft_select();
+    }
+}
+
+void Browser::resize_to_fit_contents()
+{
+    glm::ivec2 previous_size = _size;
+    size_t rows = _contents.size();
+    int required = static_cast<int>(rows + 3);
+    if (required < 3)
+    {
+        required = 3;
+    }
+    _size.y = required;
+
+    glm::ivec2 min_corner = _location;
+    glm::ivec2 max_size(
+        std::max(previous_size.x, _size.x),
+        std::max(previous_size.y, _size.y));
+    if (max_size.x > 0 && max_size.y > 0)
+    {
+        Terminal& terminal = Terminal::instance();
+        glm::ivec2 terminal_size = terminal.get_size();
+        if (terminal_size.x > 0 && terminal_size.y > 0)
+        {
+            int start_x = std::max(0, min_corner.x);
+            int start_y = std::max(0, min_corner.y);
+            int max_x = std::min(terminal_size.x, min_corner.x + max_size.x);
+            int max_y = std::min(terminal_size.y, min_corner.y + max_size.y);
+            int new_max_x = std::min(terminal_size.x, min_corner.x + _size.x);
+            int new_max_y = std::min(terminal_size.y, min_corner.y + _size.y);
+
+            if (start_x < max_x && start_y < max_y)
+            {
+                std::vector<Terminal::Character>& buffer = terminal.mutate_buffer();
+                int width = terminal_size.x;
+                for (int y = start_y; y < max_y; ++y)
+                {
+                    for (int x = start_x; x < max_x; ++x)
+                    {
+                        if (x >= new_max_x || y >= new_max_y)
+                        {
+                            size_t index = static_cast<size_t>(y * width + x);
+                            if (index < buffer.size())
+                            {
+                                buffer[index].set_glyph(U' ');
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        glm::ivec2 max_corner = min_corner + max_size - glm::ivec2(1);
+        Terminal::instance().write_region(min_corner, max_corner);
+    }
+}
+
+void Browser::set_focused(bool focused)
+{
+    _is_focused = focused;
+}
+
+void Browser::receive_focus()
+{
+    _is_focused = true;
+}
+
+void Browser::give_focus(Browser* target)
+{
+    if (!target)
+    {
+        return;
+    }
+
+    _is_focused = false;
+    target->receive_focus();
+}
+
+void Browser::set_left(Browser* left)
+{
+    _left = left;
+}
+
+void Browser::set_right(Browser* right)
+{
+    _right = right;
 }
 
 const glm::ivec2& Browser::get_location() const
@@ -156,6 +344,53 @@ size_t Browser::get_selected_index() const
     return _selected_index;
 }
 
+std::filesystem::path Browser::get_selected_path() const
+{
+    if (_contents.empty() || _selected_index >= _contents.size())
+    {
+        return std::filesystem::path();
+    }
+
+    return _contents[_selected_index]->get_path();
+}
+
+
+bool Browser::is_focused() const
+{
+    return _is_focused;
+}
+
+Browser* Browser::get_focused_in_chain()
+{
+    Browser* head = this;
+    while (head->_left)
+    {
+        head = head->_left;
+    }
+
+    Browser* current = head;
+    while (current)
+    {
+        if (current->_is_focused)
+        {
+            return current;
+        }
+        current = current->_right;
+    }
+
+    return nullptr;
+}
+
+Browser* Browser::get_left() const
+{
+    return _left;
+}
+
+Browser* Browser::get_right() const
+{
+    return _right;
+}
+
 void Browser::refresh_contents()
 {
     _contents.clear();
@@ -164,11 +399,14 @@ void Browser::refresh_contents()
 
     for (const browser_column::entry& entry : entries)
     {
-        BrowserItem item;
-        item.name = entry.name;
-        item.path = entry.path;
-        item.is_dir = entry.is_dir;
-        _contents.push_back(std::move(item));
+        if (entry.is_dir)
+        {
+            _contents.push_back(std::make_unique<FolderItem>(this, entry.name, entry.path));
+        }
+        else
+        {
+            _contents.push_back(std::make_unique<Mp3Item>(this, entry.name, entry.path));
+        }
     }
 
     if (_contents.empty())
@@ -179,6 +417,15 @@ void Browser::refresh_contents()
     {
         _selected_index = _contents.size() - 1;
     }
+
+    resize_to_fit_contents();
+}
+
+void Browser::refresh()
+{
+    refresh_contents();
+    set_selected_index(0);
+    soft_select();
 }
 
 void Browser::draw() const
@@ -217,14 +464,15 @@ void Browser::draw() const
     size_t row_count = std::min(_contents.size(), max_rows);
     for (size_t i = 0; i < row_count; ++i)
     {
-        const BrowserItem& item = _contents[i];
-        std::string line = item.name;
+        const BrowserItem& item = *_contents[i];
+        std::string line = item.get_name();
         if (static_cast<int>(line.size()) > inner_width - 2)
         {
             line.resize(static_cast<size_t>(inner_width - 2));
         }
 
-        if (i == _selected_index)
+        bool is_selected = (i == _selected_index);
+        if (is_selected)
         {
             line.insert(line.begin(), '>');
         }
@@ -238,6 +486,49 @@ void Browser::draw() const
             line.append(static_cast<size_t>(inner_width - line.size()), ' ');
         }
 
-        renderer.draw_string(line, glm::ivec2(_location.x + 1, list_start_y + static_cast<int>(i)));
+        glm::ivec2 row_location(_location.x + 1, list_start_y + static_cast<int>(i));
+        if (is_selected && _is_focused)
+        {
+            renderer.draw_string_selected(line, row_location);
+        }
+        else
+        {
+            renderer.draw_string(line, row_location);
+        }
     }
+}
+void Browser::soft_select()
+{
+    if (_contents.empty() || _selected_index >= _contents.size())
+    {
+        return;
+    }
+
+    if (_right != nullptr)
+    {
+        if (dynamic_cast<const FolderItem*>(_contents[_selected_index].get()) == nullptr)
+        {
+            size_t folder_index = _contents.size();
+            for (size_t i = 0; i < _contents.size(); ++i)
+            {
+                if (dynamic_cast<const FolderItem*>(_contents[i].get()) != nullptr)
+                {
+                    folder_index = i;
+                    break;
+                }
+            }
+
+            if (folder_index < _contents.size())
+            {
+                set_selected_index(folder_index);
+            }
+            else
+            {
+                _right->set_path(std::filesystem::path());
+                return;
+            }
+        }
+    }
+
+    _contents[_selected_index]->on_soft_select();
 }

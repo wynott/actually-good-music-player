@@ -1,4 +1,5 @@
 #pragma once
+#pragma once
 
 #include <string>
 
@@ -23,11 +24,16 @@ class Renderer
 public:
     explicit Renderer(Terminal& terminal);
     static Renderer& instance();
-    void clear_screen(const glm::vec3& colour);
+    void set_canvas(const glm::vec3& colour);
+    void set_box_colour(const glm::vec3& colour);
+    void set_text_colour(const glm::vec3& colour);
 
     void draw_box(const glm::ivec2& min_corner, const glm::ivec2& size);
     void draw_string(const std::string& text, const glm::ivec2& location);
+    void draw_string_selected(const std::string& text, const glm::ivec2& location);
 
 private:
     Terminal& _terminal;
+    glm::vec3 _box_colour = glm::vec3(255.0f);
+    glm::vec3 _text_colour = glm::vec3(255.0f);
 };

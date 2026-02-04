@@ -12,7 +12,7 @@ use_arrow_keys = true
 enable_online_art = false
 # Uses MusicBrainz + Cover Art Archive.
 search_key = "/"
-auto_resume_playback = false
+auto_resume_playback = true
 safe_mode = false
 browser_normal_fg = "#F0F0F0"
 browser_normal_bg = "#181818"
@@ -20,6 +20,8 @@ browser_selected_fg = "#000000"
 browser_selected_bg = "#E6C878"
 browser_inactive_fg = "#141414"
 browser_inactive_bg = "#A0A0A0"
+ui_box_fg = "#F0F0F0"
+ui_text_fg = "#F0F0F0"
 # Max characters for metadata lines before truncation
 metadata_max_width = 32
 # browser_normal_fg: light gray
@@ -31,8 +33,8 @@ metadata_max_width = 32
 col_width_artist = 20
 col_width_album = 24
 col_width_song = 30
-art_width_chars = 80
-art_height_chars = 40
+art_width_chars = 40
+art_height_chars = 20
 # Note: terminal characters are not square; adjust width/height per font.
 listen_port = 4242
 # Note: routers usually block inbound traffic unless port-forwarded.

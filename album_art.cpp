@@ -8,7 +8,13 @@
 
 #include "album_art.h"
 #include "terminal.h"
+
+#define STB_IMAGE_IMPLEMENTATION
 #include "vendor/stb_image.h"
+
+#include "draw.h"
+#include "http.h"
+#include "vendor/json.hpp"
 
 static uint32_t read_be32(const uint8_t* data)
 {
@@ -91,6 +97,109 @@ static bool extract_apic(const uint8_t* frame_data, size_t frame_size, std::vect
 
     image_data.assign(frame_data + offset, frame_data + frame_size);
     return !image_data.empty();
+}
+
+static bool fetch_album_art_online(const std::string& artist, const std::string& album, std::vector<unsigned char>& image_data, std::string& error)
+{
+    if (artist.empty() || album.empty())
+    {
+        error = "Missing artist/album";
+        return false;
+    }
+
+    std::string query = "https://musicbrainz.org/ws/2/release/?query=artist:%22" +
+        url_encode(artist) + "%22%20AND%20release:%22" + url_encode(album) + "%22&fmt=json&limit=1";
+
+    std::vector<unsigned char> response;
+    std::string user_agent = "ActuallyGoodMusicPlayer/0.1 (https://github.com/wynott/actually-good-music-player)";
+    if (!http_get(query, user_agent, "application/json", response))
+    {
+        error = "MusicBrainz request failed";
+        return false;
+    }
+
+    std::string json_text(response.begin(), response.end());
+    try
+    {
+        auto json = nlohmann::json::parse(json_text);
+        if (!json.contains("releases") || json["releases"].empty())
+        {
+            error = "No releases found";
+            return false;
+        }
+
+        std::string mbid = json["releases"][0]["id"].get<std::string>();
+        if (mbid.empty())
+        {
+            error = "Empty release id";
+            return false;
+        }
+
+        std::string cover_url = "https://coverartarchive.org/release/" + mbid + "/front-250";
+        image_data.clear();
+        if (!http_get(cover_url, user_agent, "image/*", image_data))
+        {
+            error = "Cover Art Archive failed";
+            return false;
+        }
+        return true;
+    }
+    catch (...)
+    {
+        error = "MusicBrainz parse failed";
+        return false;
+    }
+}
+
+static art_result start_album_art_fetch(
+    const char* path,
+    const app_config& config,
+    const std::string& artist,
+    const std::string& album)
+{
+    art_result result;
+    result.ready = false;
+    result.has_art = false;
+    result.online_failed = false;
+
+    std::vector<unsigned char> art_data;
+    bool has_art = load_mp3_embedded_art(path, art_data);
+    if (has_art)
+    {
+        result.ready = true;
+        result.has_art = true;
+        result.data = std::move(art_data);
+        return result;
+    }
+
+    if (!config.enable_online_art)
+    {
+        result.ready = true;
+        result.error_message = "No embedded art";
+    }
+
+    return result;
+}
+
+static void complete_album_art_fetch(
+    art_result& result,
+    const app_config& config,
+    const std::string& artist,
+    const std::string& album)
+{
+    if (result.ready || !config.enable_online_art)
+    {
+        return;
+    }
+
+    std::vector<unsigned char> data;
+    std::string error;
+    bool ok = fetch_album_art_online(artist, album, data, error);
+    result.ready = true;
+    result.has_art = ok;
+    result.online_failed = !ok;
+    result.data = std::move(data);
+    result.error_message = error;
 }
 
 bool load_mp3_embedded_art(const char* path, std::vector<unsigned char>& image_data)
@@ -207,6 +316,11 @@ AlbumArt::AlbumArt(const glm::ivec2& location, const glm::ivec2& size)
 {
 }
 
+AlbumArt::~AlbumArt()
+{
+    wait_for_fetch();
+}
+
 void AlbumArt::set_location(const glm::ivec2& location)
 {
     _location = location;
@@ -230,6 +344,147 @@ const glm::ivec2& AlbumArt::get_size() const
 bool AlbumArt::load(const std::vector<unsigned char>& image_data)
 {
     return load_image_data(image_data);
+}
+
+void AlbumArt::begin_fetch(
+    const std::string& path,
+    const app_config& config,
+    const std::string& artist,
+    const std::string& album)
+{
+    if (config.safe_mode)
+    {
+        _pending.store(false, std::memory_order_release);
+        return;
+    }
+
+    wait_for_fetch();
+
+    art_result result = start_album_art_fetch(path.c_str(), config, artist, album);
+    {
+        std::lock_guard<std::mutex> lock(_mutex);
+        _result = std::move(result);
+    }
+
+    bool pending = !_result.ready;
+    _pending.store(pending, std::memory_order_release);
+    if (!pending)
+    {
+        _dirty.store(true, std::memory_order_release);
+    }
+
+    if (!_result.ready && config.enable_online_art)
+    {
+        std::string artist_copy = artist;
+        std::string album_copy = album;
+        _thread = std::thread([this, config, artist_copy, album_copy]()
+        {
+            try
+            {
+                art_result local;
+                {
+                    std::lock_guard<std::mutex> lock(_mutex);
+                    local = _result;
+                }
+                complete_album_art_fetch(local, config, artist_copy, album_copy);
+                {
+                    std::lock_guard<std::mutex> lock(_mutex);
+                    _result = std::move(local);
+                }
+                _dirty.store(true, std::memory_order_release);
+            }
+            catch (...)
+            {
+            }
+            _pending.store(false, std::memory_order_release);
+        });
+    }
+}
+
+bool AlbumArt::render_current(
+    const app_config& config,
+    int origin_x,
+    int origin_y,
+    app_config::rgb_color* out_avg_color)
+{
+    art_result snapshot;
+    {
+        std::lock_guard<std::mutex> lock(_mutex);
+        snapshot = _result;
+    }
+
+    TerminalSize size = get_terminal_size();
+    int max_cols = size.columns;
+    int max_rows = size.rows;
+    if (max_cols <= 0 || max_rows <= 0)
+    {
+        return false;
+    }
+
+    max_cols = std::min(max_cols, config.art_width_chars);
+    max_rows = std::min(max_rows, config.art_height_chars);
+
+    int out_w = std::max(1, max_cols);
+    int out_h = std::max(1, max_rows);
+    if (out_w <= 0 || out_h <= 0)
+    {
+        return false;
+    }
+
+    int top_left_y = size.rows - origin_y - out_h;
+    set_location(glm::ivec2(origin_x, top_left_y));
+    set_size(glm::ivec2(out_w, out_h));
+
+    auto clear_and_set_avg = [&](const glm::vec3& colour)
+    {
+        Terminal::instance().scan_and_write_characters();
+        if (out_avg_color)
+        {
+            out_avg_color->r = static_cast<int>(colour.r + 0.5f);
+            out_avg_color->g = static_cast<int>(colour.g + 0.5f);
+            out_avg_color->b = static_cast<int>(colour.b + 0.5f);
+        }
+    };
+
+    if (!snapshot.ready || !snapshot.has_art)
+    {
+        clear_and_set_avg(glm::vec3(0.0f));
+        return true;
+    }
+
+    if (!load(snapshot.data))
+    {
+        clear_and_set_avg(glm::vec3(0.0f));
+        return true;
+    }
+
+    glm::vec3 avg_colour = this->average_colour();
+    clear_and_set_avg(avg_colour);
+
+    draw();
+    glm::ivec2 min_corner = get_location();
+    glm::ivec2 max_corner = min_corner + get_size() - glm::ivec2(1);
+    Terminal::instance().write_region(min_corner, max_corner);
+
+    return true;
+}
+
+bool AlbumArt::consume_dirty()
+{
+    return _dirty.exchange(false, std::memory_order_acq_rel);
+}
+
+bool AlbumArt::is_pending() const
+{
+    return _pending.load(std::memory_order_acquire);
+}
+
+void AlbumArt::wait_for_fetch()
+{
+    if (_thread.joinable())
+    {
+        _thread.join();
+    }
 }
 
 bool AlbumArt::load_image_data(const std::vector<unsigned char>& image_data)
@@ -349,4 +604,36 @@ void AlbumArt::draw() const
             dst.set_background_colour(src.get_background_colour());
         }
     }
+}
+
+glm::vec3 AlbumArt::average_colour() const
+{
+    if (_pixels.empty())
+    {
+        return glm::vec3(0.0f);
+    }
+
+    double sum_r = 0.0;
+    double sum_g = 0.0;
+    double sum_b = 0.0;
+    double count = 0.0;
+
+    for (const Terminal::Character& cell : _pixels)
+    {
+        glm::vec3 colour = cell.get_foreground_colour();
+        sum_r += colour.r;
+        sum_g += colour.g;
+        sum_b += colour.b;
+        count += 1.0;
+    }
+
+    if (count <= 0.0)
+    {
+        return glm::vec3(0.0f);
+    }
+
+    return glm::vec3(
+        static_cast<float>(sum_r / count),
+        static_cast<float>(sum_g / count),
+        static_cast<float>(sum_b / count));
 }

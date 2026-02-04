@@ -29,6 +29,8 @@ struct app_config
     rgb_color browser_selected_bg;
     rgb_color browser_inactive_fg;
     rgb_color browser_inactive_bg;
+    rgb_color ui_box_fg;
+    rgb_color ui_text_fg;
     int metadata_max_width;
     int col_width_artist;
     int col_width_album;

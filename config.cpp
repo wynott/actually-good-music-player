@@ -100,6 +100,8 @@ app_config load_config(const std::string& path)
     config.browser_selected_bg = {230, 200, 120};
     config.browser_inactive_fg = {20, 20, 20};
     config.browser_inactive_bg = {160, 160, 160};
+    config.ui_box_fg = {240, 240, 240};
+    config.ui_text_fg = {240, 240, 240};
     config.metadata_max_width = 48;
     config.col_width_artist = 20;
     config.col_width_album = 24;
@@ -261,6 +263,14 @@ app_config load_config(const std::string& path)
         else if (key == "browser_inactive_bg")
         {
             config.browser_inactive_bg = parse_color(value, config.browser_inactive_bg);
+        }
+        else if (key == "ui_box_fg")
+        {
+            config.ui_box_fg = parse_color(value, config.ui_box_fg);
+        }
+        else if (key == "ui_text_fg")
+        {
+            config.ui_text_fg = parse_color(value, config.ui_text_fg);
         }
         else if (key == "metadata_max_width")
         {
