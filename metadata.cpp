@@ -129,6 +129,10 @@ static void read_id3_tags(const std::string& path, track_metadata& metadata)
         return;
     }
 
+    file.seekg(0, std::ios::end);
+    std::streamoff file_size = file.tellg();
+    file.seekg(0, std::ios::beg);
+
     uint8_t header[10] = {};
     file.read(reinterpret_cast<char*>(header), sizeof(header));
     if (file.gcount() != static_cast<std::streamsize>(sizeof(header)))
@@ -143,7 +147,12 @@ static void read_id3_tags(const std::string& path, track_metadata& metadata)
 
     uint8_t version = header[3];
     uint32_t tag_size = read_syncsafe32(&header[6]);
-    if (tag_size == 0)
+    const uint32_t max_tag_size = 16 * 1024 * 1024;
+    if (tag_size == 0 || tag_size > max_tag_size)
+    {
+        return;
+    }
+    if (file_size > 0 && static_cast<std::streamoff>(tag_size) > file_size - 10)
     {
         return;
     }

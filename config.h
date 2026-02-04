@@ -16,6 +16,7 @@ struct app_config
     bool enable_online_art;
     char search_key;
     bool auto_resume_playback;
+    bool safe_mode;
     struct rgb_color
     {
         int r;

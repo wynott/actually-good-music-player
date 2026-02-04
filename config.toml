@@ -1,7 +1,7 @@
 # Actually Good Music Player config
 
 default_track = "01 High For This.mp3"
-library_path = "D:/Google Drive/Ryan personal/Music"
+library_path = "D:/Music"
 play_pause_key = "k"
 quit_key = "q"
 nav_up_key = "w"
@@ -9,10 +9,11 @@ nav_down_key = "s"
 nav_left_key = "a"
 nav_right_key = "d"
 use_arrow_keys = true
-enable_online_art = true
+enable_online_art = false
 # Uses MusicBrainz + Cover Art Archive.
 search_key = "/"
 auto_resume_playback = false
+safe_mode = false
 browser_normal_fg = "#F0F0F0"
 browser_normal_bg = "#181818"
 browser_selected_fg = "#000000"

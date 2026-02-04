@@ -93,6 +93,7 @@ app_config load_config(const std::string& path)
     config.enable_online_art = true;
     config.search_key = '/';
     config.auto_resume_playback = true;
+    config.safe_mode = false;
     config.browser_normal_fg = {240, 240, 240};
     config.browser_normal_bg = {24, 24, 24};
     config.browser_selected_fg = {0, 0, 0};
@@ -224,6 +225,17 @@ app_config load_config(const std::string& path)
             else if (value == "false" || value == "0" || value == "no")
             {
                 config.auto_resume_playback = false;
+            }
+        }
+        else if (key == "safe_mode")
+        {
+            if (value == "true" || value == "1" || value == "yes")
+            {
+                config.safe_mode = true;
+            }
+            else if (value == "false" || value == "0" || value == "no")
+            {
+                config.safe_mode = false;
             }
         }
         else if (key == "browser_normal_fg")
