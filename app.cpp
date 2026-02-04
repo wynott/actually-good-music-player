@@ -65,61 +65,6 @@ static int map_navigation_key(const app_config& config, int key)
     return key;
 }
 
-static bool fuzzy_match_score(const std::string& candidate, const std::string& query, int& score)
-{
-    if (query.empty())
-    {
-        score = 0;
-        return true;
-    }
-
-    int last_pos = -1;
-    int gap = 0;
-    size_t qi = 0;
-
-    for (size_t i = 0; i < candidate.size() && qi < query.size(); ++i)
-    {
-        char c = static_cast<char>(std::tolower(static_cast<unsigned char>(candidate[i])));
-        char q = static_cast<char>(std::tolower(static_cast<unsigned char>(query[qi])));
-        if (c == q)
-        {
-            if (last_pos >= 0)
-            {
-                gap += static_cast<int>(i - last_pos - 1);
-            }
-            last_pos = static_cast<int>(i);
-            qi += 1;
-        }
-    }
-
-    if (qi != query.size())
-    {
-        return false;
-    }
-
-    score = gap;
-    return true;
-}
-
-static int find_best_match(const std::vector<browser_column::entry>& entries, const std::string& query)
-{
-    int best_index = -1;
-    int best_score = 0;
-    for (size_t i = 0; i < entries.size(); ++i)
-    {
-        int score = 0;
-        if (fuzzy_match_score(entries[i].name, query, score))
-        {
-            if (best_index == -1 || score < best_score)
-            {
-                best_index = static_cast<int>(i);
-                best_score = score;
-            }
-        }
-    }
-    return best_index;
-}
-
 void ActuallyGoodMP::run()
 {
     try
@@ -202,71 +147,8 @@ void ActuallyGoodMP::run()
         AlbumArt album_art;
         Player player;
 
-        int box_gap = 2;
         int art_origin_x = 0;
-        int metadata_origin_x = 0;
-
-        browser_column artist;
-        artist.path = config.library_path;
-        artist.entries = list_entries(artist.path);
-        artist.selected_index = artist.entries.empty() ? -1 : 0;
-        artist.width = std::max(1, config.col_width_artist);
-        artist.start_col = 2;
-
-        browser_column album;
-        album.selected_index = 0;
-        album.width = std::max(1, config.col_width_album);
-        album.start_col = 2;
-
-        browser_column song;
-        song.selected_index = 0;
-        song.width = std::max(1, config.col_width_song);
-        song.start_col = 2;
-
-        if (artist.selected_index >= 0)
-        {
-            const auto& selected = artist.entries[artist.selected_index];
-            if (selected.is_dir)
-            {
-                album.path = selected.path;
-            }
-            else
-            {
-                album.path.clear();
-            }
-            refresh_column(album);
-        }
-        else
-        {
-            album.path.clear();
-            refresh_column(album);
-        }
-
-        if (album.selected_index >= 0)
-        {
-            const auto& selected = album.entries[album.selected_index];
-            if (selected.is_dir)
-            {
-                song.path = selected.path;
-            }
-            else
-            {
-                song.path.clear();
-            }
-            refresh_column(song);
-        }
-        else
-        {
-            song.path.clear();
-            refresh_column(song);
-        }
-
-        int active_column = 0;
-        int prev_artist_rows = 0;
-        int prev_album_rows = 0;
-        int prev_song_rows = 0;
-        update_layout(config, artist, album, song, box_gap, art_origin_x, metadata_origin_x);
-        draw_browsers(config, artist, album, song, active_column);
+        int metadata_origin_x = config.art_width_chars + 2;
 
         net_info info;
         bool network_started = start_network(config.listen_port, info);
@@ -302,14 +184,10 @@ void ActuallyGoodMP::run()
         {
         }
 
-        std::string search_query;
-        bool search_active = false;
-
         album_art.begin_fetch(player.get_current_track(), config, current_artist, current_album);
 
         auto full_redraw = [&]()
         {
-            update_layout(config, artist, album, song, box_gap, art_origin_x, metadata_origin_x);
             app_config::rgb_color avg_color = config.browser_normal_bg;
             if (config.safe_mode)
             {
@@ -328,19 +206,6 @@ void ActuallyGoodMP::run()
                 }
                 config.browser_normal_bg = avg_color;
             }
-            TerminalSize size = get_terminal_size();
-            int start_row = 3;
-            int max_rows = std::max(0, size.rows - start_row + 1);
-            int artist_rows = std::min(max_rows, static_cast<int>(artist.entries.size()));
-            int album_rows = std::min(max_rows, static_cast<int>(album.entries.size()));
-            int song_rows = std::min(max_rows, static_cast<int>(song.entries.size()));
-            fill_browser_area(config, artist, start_row, std::max(prev_artist_rows, artist_rows));
-            fill_browser_area(config, album, start_row, std::max(prev_album_rows, album_rows));
-            fill_browser_area(config, song, start_row, std::max(prev_song_rows, song_rows));
-            draw_browsers(config, artist, album, song, active_column);
-            prev_artist_rows = artist_rows;
-            prev_album_rows = album_rows;
-            prev_song_rows = song_rows;
             experimental_artist_browser.draw();
             experimental_album_browser.draw();
             experimental_song_browser.draw();
@@ -369,14 +234,7 @@ void ActuallyGoodMP::run()
             }
             if (!status_base.empty())
             {
-                if (search_active)
-                {
-                    draw_status_line(status_base + " | /" + search_query);
-                }
-                else
-                {
-                    draw_status_line(status_base);
-                }
+                draw_status_line(status_base);
             }
         };
 
@@ -386,7 +244,6 @@ void ActuallyGoodMP::run()
         }
         else
         {
-            draw_browsers(config, artist, album, song, active_column);
             experimental_artist_browser.draw();
             experimental_album_browser.draw();
             experimental_song_browser.draw();
@@ -483,26 +340,7 @@ void ActuallyGoodMP::run()
         {
             if (playback_active && player.is_done())
             {
-                if (song.selected_index >= 0 && song.selected_index + 1 < static_cast<int>(song.entries.size()))
-                {
-                    song.selected_index += 1;
-                    player.set_current_track(song.entries[song.selected_index].path.string());
-                    current_album = album.selected_index >= 0 ? album.entries[album.selected_index].name : "";
-                    current_artist = artist.selected_index >= 0 ? artist.entries[artist.selected_index].name : "";
-                    player.stop_playback();
-                    playback_active = player.start_playback(player.get_current_track()) == 0;
-                    playback_failed = !playback_active;
-                    if (playback_failed)
-                    {
-                        draw_status_line("Playback failed");
-                    }
-                    album_art.begin_fetch(player.get_current_track(), config, current_artist, current_album);
-                    full_redraw();
-                }
-                else
-                {
-                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-                }
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
 
             int raw_key = input_poll_key();
@@ -520,181 +358,15 @@ void ActuallyGoodMP::run()
                 char ch = normalize_key(static_cast<char>(key));
                 char pause_key = normalize_key(config.play_pause_key);
                 char quit_key = normalize_key(config.quit_key);
-                char search_key = normalize_key(config.search_key);
-
-                if (!search_active)
+                if (ch == pause_key)
                 {
-                    if (ch == pause_key)
-                    {
-                        player.toggle_pause();
-                    }
-                    if (ch == quit_key)
-                    {
-                        quit = true;
-                    }
-                    if (ch == search_key)
-                    {
-                        search_active = true;
-                        search_query.clear();
-                        if (!status_base.empty())
-                        {
-                            draw_status_line(status_base + " | /" + search_query);
-                        }
-                    }
+                    player.toggle_pause();
                 }
-                else
+                if (ch == quit_key)
                 {
-                    if (key == '\r' || key == '\n' || key == 27)
-                    {
-                        search_active = false;
-                        full_redraw();
-                    }
-                    else if (key == 8 || key == 127)
-                    {
-                        if (!search_query.empty())
-                        {
-                            search_query.pop_back();
-                        }
-                    }
-                    else if (std::isprint(static_cast<unsigned char>(key)))
-                    {
-                        search_query.push_back(static_cast<char>(key));
-                    }
-
-                    if (search_active)
-                    {
-                        int match = find_best_match(artist.entries, search_query);
-                        if (match >= 0 && match != artist.selected_index)
-                        {
-                            int previous = artist.selected_index;
-                            artist.selected_index = match;
-
-                            TerminalSize size = get_terminal_size();
-                            int start_row = 3;
-                            int max_rows = std::max(0, size.rows - start_row + 1);
-                            int artist_rows = std::min(max_rows, static_cast<int>(artist.entries.size()));
-                            int album_rows = std::min(max_rows, static_cast<int>(album.entries.size()));
-                            int song_rows = std::min(max_rows, static_cast<int>(song.entries.size()));
-                            bool layout_changed = update_layout(config, artist, album, song, box_gap, art_origin_x, metadata_origin_x);
-                            if (layout_changed)
-                            {
-                                full_redraw();
-                                album_art.wait_for_fetch();
-                            }
-                            if (previous >= 0 && previous < artist_rows)
-                            {
-                                draw_browser_row(config, artist, previous, start_row, active_column == 0);
-                            }
-                            if (match < artist_rows)
-                            {
-                                draw_browser_row(config, artist, match, start_row, active_column == 0);
-                            }
-
-                            const auto& selected = artist.entries[artist.selected_index];
-                            album.path = selected.is_dir ? selected.path : std::filesystem::path();
-                            refresh_column(album);
-
-                            if (album.selected_index >= 0)
-                            {
-                                const auto& album_selected = album.entries[album.selected_index];
-                                song.path = album_selected.is_dir ? album_selected.path : std::filesystem::path();
-                            }
-                            else
-                            {
-                                song.path.clear();
-                            }
-                            refresh_column(song);
-
-                            draw_browser_column(config, album, start_row, album_rows, active_column == 1);
-                            draw_browser_column(config, song, start_row, song_rows, active_column == 2);
-                        }
-                        if (!status_base.empty())
-                        {
-                            draw_status_line(status_base + " | /" + search_query);
-                        }
-                    }
+                    quit = true;
                 }
 
-                if (key == '\r' || key == '\n')
-                {
-                    browser_column* target = nullptr;
-                    if (active_column == 0)
-                    {
-                        target = &artist;
-                    }
-                    else if (active_column == 1)
-                    {
-                        target = &album;
-                    }
-                    else
-                    {
-                        target = &song;
-                    }
-
-                    if (target != nullptr && target->selected_index >= 0)
-                    {
-                        const auto& selected = target->entries[target->selected_index];
-                        if (selected.is_dir && active_column < 2)
-                        {
-                            if (active_column == 0)
-                            {
-                                album.path = selected.path;
-                                refresh_column(album);
-                                if (album.selected_index >= 0)
-                                {
-                                    const auto& album_selected = album.entries[album.selected_index];
-                                    song.path = album_selected.is_dir ? album_selected.path : std::filesystem::path();
-                                }
-                                else
-                                {
-                                    song.path.clear();
-                                }
-                                refresh_column(song);
-                            }
-                            else if (active_column == 1)
-                            {
-                                song.path = selected.is_dir ? selected.path : std::filesystem::path();
-                                refresh_column(song);
-                            }
-                            active_column = std::min(2, active_column + 1);
-                            dirty = true;
-                        }
-                        else if (!selected.is_dir)
-                        {
-                            player.set_current_track(selected.path.string());
-                            current_album = album.selected_index >= 0 ? album.entries[album.selected_index].name : "";
-                            current_artist = artist.selected_index >= 0 ? artist.entries[artist.selected_index].name : "";
-                            player.stop_playback();
-                            playback_active = player.start_playback(player.get_current_track()) == 0;
-                            playback_failed = !playback_active;
-                            if (playback_failed)
-                            {
-                                draw_status_line("Playback failed");
-                            }
-                            album_art.begin_fetch(player.get_current_track(), config, current_artist, current_album);
-                            if (!album_art.is_pending())
-                            {
-                                full_redraw();
-                            }
-                            else
-                            {
-                                draw_browsers(config, artist, album, song, active_column);
-                                if (!config.safe_mode)
-                                {
-                                    track_metadata meta;
-                                    if (read_track_metadata(player.get_current_track(), meta))
-                                    {
-                                        draw_metadata_panel(config, meta, metadata_origin_x + 1, 3);
-                                    }
-                                }
-                                if (!status_base.empty())
-                                {
-                                    draw_status_line(status_base);
-                                }
-                            }
-                        }
-                    }
-                }
                 if (key == input_key_left)
                 {
                     Browser* focused = experimental_artist_browser.get_focused_in_chain();
@@ -720,8 +392,6 @@ void ActuallyGoodMP::run()
                         }
                     }
 
-                    active_column = std::max(0, active_column - 1);
-                    dirty = true;
                 }
                 if (key == input_key_right)
                 {
@@ -748,8 +418,6 @@ void ActuallyGoodMP::run()
                         }
                     }
 
-                    active_column = std::min(2, active_column + 1);
-                    dirty = true;
                 }
                 if (key == input_key_up || key == input_key_down)
                 {
@@ -782,72 +450,7 @@ void ActuallyGoodMP::run()
                         }
                     }
 
-                    int direction = (key == input_key_up) ? -1 : 1;
-                    browser_column* target = nullptr;
-                    if (active_column == 0)
-                    {
-                        target = &artist;
-                    }
-                    else if (active_column == 1)
-                    {
-                        target = &album;
-                    }
-                    else
-                    {
-                        target = &song;
-                    }
 
-                    if (target != nullptr && !target->entries.empty())
-                    {
-                        target->selected_index = std::clamp(
-                            target->selected_index + direction,
-                            0,
-                            static_cast<int>(target->entries.size() - 1));
-                        dirty = true;
-                    }
-
-                    if (active_column == 0)
-                    {
-                        if (artist.selected_index >= 0)
-                        {
-                            const auto& selected = artist.entries[artist.selected_index];
-                            album.path = selected.is_dir ? selected.path : std::filesystem::path();
-                        }
-                        else
-                        {
-                            album.path.clear();
-                        }
-                        refresh_column(album);
-
-                        if (album.selected_index >= 0)
-                        {
-                            const auto& selected = album.entries[album.selected_index];
-                            song.path = selected.is_dir ? selected.path : std::filesystem::path();
-                        }
-                        else
-                        {
-                            song.path.clear();
-                        }
-                        refresh_column(song);
-                    }
-                    else if (active_column == 1)
-                    {
-                        if (album.selected_index >= 0)
-                        {
-                            const auto& selected = album.entries[album.selected_index];
-                            song.path = selected.is_dir ? selected.path : std::filesystem::path();
-                        }
-                        else
-                        {
-                            song.path.clear();
-                        }
-                        refresh_column(song);
-                    }
-
-                    if (update_layout(config, artist, album, song, box_gap, art_origin_x, metadata_origin_x))
-                    {
-                        full_redraw();
-                    }
                 }
             }
 
@@ -855,43 +458,6 @@ void ActuallyGoodMP::run()
         {
             full_redraw();
         }
-
-            if (dirty)
-            {
-                if (update_layout(config, artist, album, song, box_gap, art_origin_x, metadata_origin_x))
-                {
-                    full_redraw();
-                    dirty = false;
-                }
-                else
-                {
-                    TerminalSize size = get_terminal_size();
-                    int start_row = 3;
-                    int max_rows = std::max(0, size.rows - start_row + 1);
-                    int artist_rows = std::min(max_rows, static_cast<int>(artist.entries.size()));
-                    int album_rows = std::min(max_rows, static_cast<int>(album.entries.size()));
-                    int song_rows = std::min(max_rows, static_cast<int>(song.entries.size()));
-                    fill_browser_area(config, artist, start_row, std::max(prev_artist_rows, artist_rows));
-                    fill_browser_area(config, album, start_row, std::max(prev_album_rows, album_rows));
-                    fill_browser_area(config, song, start_row, std::max(prev_song_rows, song_rows));
-                    draw_browsers(config, artist, album, song, active_column);
-                    prev_artist_rows = artist_rows;
-                    prev_album_rows = album_rows;
-                    prev_song_rows = song_rows;
-                    if (!status_base.empty())
-                    {
-                        if (search_active)
-                        {
-                            draw_status_line(status_base + " | /" + search_query);
-                        }
-                        else
-                        {
-                            draw_status_line(status_base);
-                        }
-                    }
-                    dirty = false;
-                }
-            }
 
             std::this_thread::sleep_for(std::chrono::milliseconds(16));
         }
