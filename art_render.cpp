@@ -8,11 +8,15 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "vendor/stb_image.h"
 
+#include "art_render.h"
 #include "album_art.h"
 #include "config.h"
 #include "http.h"
 #include "terminal.h"
+#include "draw.h"
 #include "vendor/json.hpp"
+
+bool load_mp3_embedded_art(const char* path, std::vector<unsigned char>& image_data);
 
 static void append_color(std::string& out, int r, int g, int b)
 {
@@ -177,7 +181,8 @@ bool render_album_art(
 
     if (!result.ready)
     {
-        clear_screen_rgb(0, 0, 0);
+        Renderer::instance().clear_screen(glm::vec3(0.0f));
+        Terminal::instance().scan_and_write_characters();
         draw_log_message(start_col, start_row, out_w, out_h, 0, "No embedded art");
         draw_log_message(start_col, start_row, out_w, out_h, 1, "Fetching online via MusicBrainz");
         if (out_avg_color)
@@ -191,7 +196,8 @@ bool render_album_art(
 
     if (!result.has_art)
     {
-        clear_screen_rgb(0, 0, 0);
+        Renderer::instance().clear_screen(glm::vec3(0.0f));
+        Terminal::instance().scan_and_write_characters();
         std::string message = result.error_message.empty() ? "Fetch failed" : result.error_message;
         draw_centered_message(start_col, start_row, out_w, out_h, message);
         if (out_avg_color)
@@ -216,7 +222,8 @@ bool render_album_art(
 
     if (pixels == nullptr || width <= 0 || height <= 0)
     {
-        clear_screen_rgb(0, 0, 0);
+        Renderer::instance().clear_screen(glm::vec3(0.0f));
+        Terminal::instance().scan_and_write_characters();
         draw_centered_message(start_col, start_row, out_w, out_h, "Art decode failed");
         return true;
     }
@@ -284,7 +291,8 @@ bool render_album_art(
         int avg_r = static_cast<int>(sum_r / count);
         int avg_g = static_cast<int>(sum_g / count);
         int avg_b = static_cast<int>(sum_b / count);
-        clear_screen_rgb(avg_r, avg_g, avg_b);
+        Renderer::instance().clear_screen(glm::vec3(static_cast<float>(avg_r), static_cast<float>(avg_g), static_cast<float>(avg_b)));
+        Terminal::instance().scan_and_write_characters();
         if (out_avg_color)
         {
             out_avg_color->r = avg_r;
@@ -294,7 +302,8 @@ bool render_album_art(
     }
     else
     {
-        clear_screen_rgb(0, 0, 0);
+        Renderer::instance().clear_screen(glm::vec3(0.0f));
+        Terminal::instance().scan_and_write_characters();
         if (out_avg_color)
         {
             out_avg_color->r = 0;
@@ -308,5 +317,132 @@ bool render_album_art(
     std::cout.flush();
 
     stbi_image_free(pixels);
+    return true;
+}
+
+bool ArtRenderer::render(
+    const art_result& result,
+    const app_config& config,
+    int origin_x,
+    int origin_y,
+    app_config::rgb_color* out_avg_color)
+{
+    TerminalSize size = get_terminal_size();
+    int max_cols = size.columns;
+    int max_rows = size.rows;
+    if (max_cols <= 0 || max_rows <= 0)
+    {
+        return false;
+    }
+
+    max_cols = std::min(max_cols, config.art_width_chars);
+    max_rows = std::min(max_rows, config.art_height_chars);
+
+    int out_w = std::max(1, max_cols);
+    int out_h = std::max(1, max_rows);
+    if (out_w <= 0 || out_h <= 0)
+    {
+        return false;
+    }
+
+    int top_left_y = size.rows - origin_y - out_h;
+    glm::ivec2 location(origin_x, top_left_y);
+    _album_art.set_location(location);
+    _album_art.set_size(glm::ivec2(out_w, out_h));
+
+    auto clear_and_set_avg = [&](int r, int g, int b)
+    {
+        Renderer::instance().clear_screen(glm::vec3(static_cast<float>(r), static_cast<float>(g), static_cast<float>(b)));
+        Terminal::instance().scan_and_write_characters();
+        if (out_avg_color)
+        {
+            out_avg_color->r = r;
+            out_avg_color->g = g;
+            out_avg_color->b = b;
+        }
+    };
+
+    if (!result.ready || !result.has_art)
+    {
+        clear_and_set_avg(0, 0, 0);
+        return true;
+    }
+
+    int width = 0;
+    int height = 0;
+    int channels = 0;
+    unsigned char* pixels = stbi_load_from_memory(
+        result.data.data(),
+        static_cast<int>(result.data.size()),
+        &width,
+        &height,
+        &channels,
+        4);
+
+    if (pixels == nullptr || width <= 0 || height <= 0)
+    {
+        clear_and_set_avg(0, 0, 0);
+        return true;
+    }
+
+    long long sum_r = 0;
+    long long sum_g = 0;
+    long long sum_b = 0;
+    long long count = 0;
+
+    for (int y = 0; y < out_h; ++y)
+    {
+        int src_y = static_cast<int>((static_cast<float>(y) / static_cast<float>(out_h)) * height);
+        if (src_y >= height)
+        {
+            src_y = height - 1;
+        }
+
+        for (int x = 0; x < out_w; ++x)
+        {
+            int src_x = static_cast<int>((static_cast<float>(x) / static_cast<float>(out_w)) * width);
+            if (src_x >= width)
+            {
+                src_x = width - 1;
+            }
+
+            size_t index = static_cast<size_t>((src_y * width + src_x) * 4);
+            int r = pixels[index + 0];
+            int g = pixels[index + 1];
+            int b = pixels[index + 2];
+
+            sum_r += r;
+            sum_g += g;
+            sum_b += b;
+            count += 1;
+        }
+    }
+
+    stbi_image_free(pixels);
+
+    if (!_album_art.load(result.data))
+    {
+        clear_and_set_avg(0, 0, 0);
+        return true;
+    }
+
+    _album_art.draw();
+
+    glm::ivec2 min_corner = _album_art.get_location();
+    glm::ivec2 max_corner = min_corner + _album_art.get_size() - glm::ivec2(1);
+    Terminal::instance().write_region(min_corner, max_corner);
+
+    if (count > 0)
+    {
+        int avg_r = static_cast<int>(sum_r / count);
+        int avg_g = static_cast<int>(sum_g / count);
+        int avg_b = static_cast<int>(sum_b / count);
+        clear_and_set_avg(avg_r, avg_g, avg_b);
+    }
+    else
+    {
+        clear_and_set_avg(0, 0, 0);
+    }
+
     return true;
 }

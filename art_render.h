@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 
+#include "album_art.h"
 #include "config.h"
 
 struct art_result
@@ -32,3 +33,17 @@ bool render_album_art(
     int origin_x,
     int origin_y,
     app_config::rgb_color* out_avg_color);
+
+class ArtRenderer
+{
+public:
+    bool render(
+        const art_result& result,
+        const app_config& config,
+        int origin_x,
+        int origin_y,
+        app_config::rgb_color* out_avg_color);
+
+private:
+    AlbumArt _album_art;
+};
