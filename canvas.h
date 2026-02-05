@@ -2,10 +2,13 @@
 
 #include <vector>
 
+#include "config.h"
 #include "terminal.h"
 
 #include <glm/vec2.hpp>
 #include <glm/vec4.hpp>
+
+class AlbumArt;
 
 class Canvas
 {
@@ -24,8 +27,12 @@ public:
         const glm::vec4& top_right,
         const glm::vec4& bottom_left,
         const glm::vec4& bottom_right);
+    void build_default(const app_config& config);
+    void build_from_album(const app_config& config, const AlbumArt& album_art);
+    void build_grid(const app_config& config);
 
 private:
+    void draw_art(const std::vector<std::string>& lines, const glm::vec4& colour);
     glm::ivec2 _size = glm::ivec2(0);
     std::vector<Terminal::Character> _buffer;
 };

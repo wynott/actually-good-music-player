@@ -41,7 +41,7 @@ public:
     bool load(const std::vector<unsigned char>& image_data);
     void draw() const;
 
-    void average_colour(glm::vec4& top_left, glm::vec4& top_right, glm::vec4& bottom_left, glm::vec4& bottom_right) const;
+    bool get_quadrant_colours(glm::vec4& top_left, glm::vec4& top_right, glm::vec4& bottom_left, glm::vec4& bottom_right) const;
 
     void set_track(
         const std::string& path,
@@ -49,20 +49,19 @@ public:
         const std::string& artist,
         const std::string& album);
 
-    void update_from_player(Player*,
-                            const app_config& config,
-                            int origin_x,
-                            int origin_y);
-    
-    bool render_current(
+    bool refresh(
         const app_config& config,
         int origin_x,
-        int origin_y,
-        app_config::rgb_color* out_avg_color);
+        int origin_y);
     void wait_for_fetch();
 
 
 private:
+    void average_colour(glm::vec4& top_left, glm::vec4& top_right, glm::vec4& bottom_left, glm::vec4& bottom_right) const;
+    bool render_current(
+        const app_config& config,
+        int origin_x,
+        int origin_y);
     bool load_image_data(const std::vector<unsigned char>& image_data);
 
 private:

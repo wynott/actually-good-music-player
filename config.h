@@ -36,7 +36,17 @@ struct app_config
     rgb_color rice_background_tr;
     rgb_color rice_background_bl;
     rgb_color rice_background_br;
+    bool rice_draw_art;
     std::vector<std::string> rice_art;
+    bool draw_grid_canvas;
+    int grid_spacing_x;
+    int grid_spacing_y;
+    int grid_label_every;
+    rgb_color grid_background_tl;
+    rgb_color grid_background_tr;
+    rgb_color grid_background_bl;
+    rgb_color grid_background_br;
+    rgb_color grid_line_colour;
     int metadata_max_width;
     int metadata_origin_x;
     int metadata_origin_y;

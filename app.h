@@ -1,8 +1,11 @@
 #pragma once
+#pragma once
 
+#include "album_art.h"
 #include "browser.h"
 #include "canvas.h"
 #include "player.h"
+#include "rice.h"
 #include "terminal.h"
 
 class ActuallyGoodMP
@@ -14,6 +17,7 @@ public:
     void run();
     void shutdown();
 
+    const app_config& get_config() const;
     Canvas* get_canvas();
 
     ActuallyGoodMP(const ActuallyGoodMP&) = delete;
@@ -24,6 +28,9 @@ public:
     void init_browsers();
 
 private:
+    void update_canvas_from_album();
+
+private:
     ActuallyGoodMP() = default;
 
     // todo: add init_logging();
@@ -32,10 +39,13 @@ private:
     Browser _artist_browser;
     Browser _album_browser;
     Browser _song_browser;
+    AlbumArt _album_art;
     app_config _config;
     Player _player;
     Terminal _terminal;
     int _mp3_selected_subscription = 0;
+    int _album_art_subscription = 0;
     Canvas _canvas;
+    Rice _rice;
 
 };

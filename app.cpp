@@ -7,7 +7,6 @@
 #include <thread>
 
 #include "app.h"
-#include "album_art.h"
 #include "canvas.h"
 #include "draw.h"
 #include "event.h"
@@ -94,6 +93,20 @@ void ActuallyGoodMP::init()
 
     Renderer::init(_terminal);
 
+    if (auto renderer = Renderer::get())
+    {
+        _canvas.resize(renderer->get_terminal_size());
+        if (_config.draw_grid_canvas)
+        {
+            _canvas.build_grid(_config);
+        }
+        else
+        {
+            _canvas.build_default(_config);
+        }
+        renderer->set_canvas(_canvas.get_buffer());
+    }
+
     _mp3_selected_subscription = EventBus::instance().subscribe(
         "browser.mp3_selected",
         [this](const Event& event)
@@ -106,6 +119,20 @@ void ActuallyGoodMP::init()
             _player.set_current_track(event.payload);
             _player.stop_playback();
             _player.start_playback(_player.get_current_track());
+
+            _player.ensure_context_from_track();
+            auto context = _player.get_context();
+            _album_art.set_track(_player.get_current_track(), _config, context.artist, context.album);
+            _album_art.refresh(_config, 0, 0);
+            update_canvas_from_album();
+        });
+
+    _album_art_subscription = EventBus::instance().subscribe(
+        "album_art.updated",
+        [this](const Event&)
+        {
+            _album_art.refresh(_config, 0, 0);
+            update_canvas_from_album();
         });
 
     init_browsers();
@@ -113,11 +140,7 @@ void ActuallyGoodMP::init()
 
 void ActuallyGoodMP::run()
 {
-    Rice rice;
-
-    rice.run(_config);
-
-    AlbumArt album_art;
+    _rice.run(_config);
     
     MetadataPanel metadata_panel;
 
@@ -177,7 +200,9 @@ void ActuallyGoodMP::run()
 
     _player.ensure_context_from_track();
     player_context context = _player.get_context();
-    album_art.set_track(_player.get_current_track(), _config, context.artist, context.album);
+    _album_art.set_track(_player.get_current_track(), _config, context.artist, context.album);
+    _album_art.refresh(_config, 0, 0);
+    update_canvas_from_album();
 
 
     _artist_browser.draw();
@@ -235,8 +260,6 @@ void ActuallyGoodMP::run()
         {
             _player.handle_track_finished();
         }
-
-        album_art.update_from_player(&_player, _config, 0, 0);
 
         if (!_config.safe_mode)
         {
@@ -305,6 +328,11 @@ void ActuallyGoodMP::run()
     return;
 }
 
+const app_config& ActuallyGoodMP::get_config() const
+{
+    return _config;
+}
+
 Canvas* ActuallyGoodMP::get_canvas()
 {
     return &_canvas;
@@ -330,10 +358,36 @@ void ActuallyGoodMP::shutdown()
         EventBus::instance().unsubscribe(_mp3_selected_subscription);
         _mp3_selected_subscription = 0;
     }
+
+    if (_album_art_subscription != 0)
+    {
+        EventBus::instance().unsubscribe(_album_art_subscription);
+        _album_art_subscription = 0;
+    }
     
     input_shutdown();
     http_cleanup();
     stop_network();
+}
+
+void ActuallyGoodMP::update_canvas_from_album()
+{
+    auto renderer = Renderer::get();
+    if (!renderer)
+    {
+        return;
+    }
+
+    _canvas.resize(renderer->get_terminal_size());
+    if (_config.draw_grid_canvas)
+    {
+        _canvas.build_grid(_config);
+    }
+    else
+    {
+        _canvas.build_from_album(_config, _album_art);
+    }
+    renderer->set_canvas(_canvas.get_buffer());
 }
 
 void ActuallyGoodMP::init_browsers()

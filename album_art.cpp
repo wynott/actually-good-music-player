@@ -7,7 +7,6 @@
 #include <vector>
 
 #include "album_art.h"
-#include "canvas.h"
 #include "spdlog/spdlog.h"
 #include "terminal.h"
 
@@ -15,6 +14,7 @@
 #include "vendor/stb/stb_image.h"
 
 #include "draw.h"
+#include "event.h"
 #include "http.h"
 #include "player.h"
 #include "vendor/json/single_include/nlohmann/json.hpp"
@@ -384,6 +384,7 @@ void AlbumArt::set_track(
     if (!pending)
     {
         _dirty.store(true, std::memory_order_release);
+        EventBus::instance().publish(Event{"album_art.updated", _current_track});
     }
 
     if (!_result.ready && config.enable_online_art)
@@ -405,6 +406,7 @@ void AlbumArt::set_track(
                     _result = std::move(local);
                 }
                 _dirty.store(true, std::memory_order_release);
+                EventBus::instance().publish(Event{"album_art.updated", _current_track});
             }
             catch (...)
             {
@@ -414,33 +416,20 @@ void AlbumArt::set_track(
     }
 }
 
-void AlbumArt::update_from_player(Player* player,
-                                  const app_config& config,
-                                  int origin_x,
-                                  int origin_y)
+bool AlbumArt::refresh(const app_config& config, int origin_x, int origin_y)
 {
-    
-
-    player->ensure_context_from_track();
-    auto context = player->get_context();
-
-    set_track(
-        player->get_current_track(),
-        config,
-        context.artist,
-        context.album);
-
     if (_dirty.exchange(false, std::memory_order_acq_rel))
     {
-        render_current(config, origin_x, origin_y, nullptr);
+        return render_current(config, origin_x, origin_y);
     }
+
+    return false;
 }
 
 bool AlbumArt::render_current(
     const app_config& config,
     int origin_x,
-    int origin_y,
-    app_config::rgb_color* out_avg_color)
+    int origin_y)
 {
     art_result snapshot;
     {
@@ -476,56 +465,14 @@ bool AlbumArt::render_current(
     set_location(glm::ivec2(origin_x, top_left_y));
     set_size(glm::ivec2(out_w, out_h));
 
-    auto clear_and_set_avg = [&](const glm::vec4& colour)
-    {
-        if (out_avg_color)
-        {
-            out_avg_color->r = colour.r;
-            out_avg_color->g = colour.g;
-            out_avg_color->b = colour.b;
-        }
-    };
-
     if (!snapshot.ready || !snapshot.has_art)
     {
-        clear_and_set_avg(glm::vec4(0.0f));
-
-        Canvas canvas(renderer->get_terminal_size());
-        canvas.fill_gradient(
-            glm::vec4(config.rice_background_tl.r, config.rice_background_tl.g, config.rice_background_tl.b, 1.0f),
-            glm::vec4(config.rice_background_tr.r, config.rice_background_tr.g, config.rice_background_tr.b, 1.0f),
-            glm::vec4(config.rice_background_bl.r, config.rice_background_bl.g, config.rice_background_bl.b, 1.0f),
-            glm::vec4(config.rice_background_br.r, config.rice_background_br.g, config.rice_background_br.b, 1.0f));
-        renderer->set_canvas(canvas.get_buffer());
-
-        return true;
+        return false;
     }
 
     if (!load(snapshot.data))
     {
-        clear_and_set_avg(glm::vec4(0.0f));
-
-        Canvas canvas(renderer->get_terminal_size());
-        canvas.fill_gradient(
-            glm::vec4(config.rice_background_tl.r, config.rice_background_tl.g, config.rice_background_tl.b, 1.0f),
-            glm::vec4(config.rice_background_tr.r, config.rice_background_tr.g, config.rice_background_tr.b, 1.0f),
-            glm::vec4(config.rice_background_bl.r, config.rice_background_bl.g, config.rice_background_bl.b, 1.0f),
-            glm::vec4(config.rice_background_br.r, config.rice_background_br.g, config.rice_background_br.b, 1.0f));
-        renderer->set_canvas(canvas.get_buffer());
-
-        return true;
-    }
-
-    glm::vec4 avg_tl(0.0f);
-    glm::vec4 avg_tr(0.0f);
-    glm::vec4 avg_bl(0.0f);
-    glm::vec4 avg_br(0.0f);
-    average_colour(avg_tl, avg_tr, avg_bl, avg_br);
-    clear_and_set_avg((avg_tl + avg_tr + avg_bl + avg_br) * 0.25f);
-    {
-        Canvas canvas(renderer->get_terminal_size());
-        canvas.fill_gradient(avg_tl, avg_tr, avg_bl, avg_br);
-        renderer->set_canvas(canvas.get_buffer());
+        return false;
     }
 
     draw();
@@ -659,6 +606,17 @@ void AlbumArt::draw() const
                 src.get_background_colour());
         }
     }
+}
+
+bool AlbumArt::get_quadrant_colours(glm::vec4& top_left, glm::vec4& top_right, glm::vec4& bottom_left, glm::vec4& bottom_right) const
+{
+    if (_pixels.empty())
+    {
+        return false;
+    }
+
+    average_colour(top_left, top_right, bottom_left, bottom_right);
+    return true;
 }
 
 void AlbumArt::average_colour(glm::vec4& top_left, glm::vec4& top_right, glm::vec4& bottom_left, glm::vec4& bottom_right) const

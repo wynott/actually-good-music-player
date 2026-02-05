@@ -1,7 +1,6 @@
 # Actually Good Music Player
 # Config file for layout, input, and rendering.
 
-# --- Rice art ---
 rice_art = """
      ▄▄                         ▄▄ ▄▄          ▄   ▄▄▄▄
    ▄█▀▀█▄         █▄             ██ ██         ▀██████▀                █▄
@@ -21,6 +20,18 @@ rice_art = """
                                                            ██
                                                          ▀▀▀
 """
+rice_draw_art = true
+
+# --- Grid canvas ---
+draw_grid_canvas = false
+grid_spacing_x = 6
+grid_spacing_y = 3
+grid_label_every = 2
+grid_background_tl = "0.086, 0.086, 0.106"
+grid_background_tr = "0.082, 0.086, 0.106"
+grid_background_bl = "0.090, 0.094, 0.114"
+grid_background_br = "0.173, 0.204, 0.227"
+grid_line_colour = "0.490, 0.490, 0.490"
 
 # --- Library and playback ---
 library_path = "D:/Music"

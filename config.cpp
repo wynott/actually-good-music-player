@@ -121,7 +121,17 @@ app_config load_config(const std::string& path)
     config.rice_background_tr = {0.082f, 0.086f, 0.106f};
     config.rice_background_bl = {0.090f, 0.094f, 0.114f};
     config.rice_background_br = {0.173f, 0.204f, 0.227f};
+    config.rice_draw_art = true;
     config.rice_art = kDefaultRiceArt;
+    config.draw_grid_canvas = false;
+    config.grid_spacing_x = 6;
+    config.grid_spacing_y = 3;
+    config.grid_label_every = 2;
+    config.grid_background_tl = {0.086f, 0.086f, 0.106f};
+    config.grid_background_tr = {0.082f, 0.086f, 0.106f};
+    config.grid_background_bl = {0.090f, 0.094f, 0.114f};
+    config.grid_background_br = {0.173f, 0.204f, 0.227f};
+    config.grid_line_colour = {0.490f, 0.490f, 0.490f};
     config.metadata_max_width = 48;
     config.metadata_origin_x = config.art_width_chars + 2;
     config.metadata_origin_y = 3;
@@ -352,6 +362,78 @@ app_config load_config(const std::string& path)
         else if (key == "rice_background_br")
         {
             config.rice_background_br = parse_color(value, config.rice_background_br);
+        }
+        else if (key == "rice_draw_art")
+        {
+            if (value == "true" || value == "1" || value == "yes")
+            {
+                config.rice_draw_art = true;
+            }
+            else if (value == "false" || value == "0" || value == "no")
+            {
+                config.rice_draw_art = false;
+            }
+        }
+        else if (key == "draw_grid_canvas")
+        {
+            if (value == "true" || value == "1" || value == "yes")
+            {
+                config.draw_grid_canvas = true;
+            }
+            else if (value == "false" || value == "0" || value == "no")
+            {
+                config.draw_grid_canvas = false;
+            }
+        }
+        else if (key == "grid_spacing_x")
+        {
+            try
+            {
+                config.grid_spacing_x = std::max(1, std::stoi(value));
+            }
+            catch (...)
+            {
+            }
+        }
+        else if (key == "grid_spacing_y")
+        {
+            try
+            {
+                config.grid_spacing_y = std::max(1, std::stoi(value));
+            }
+            catch (...)
+            {
+            }
+        }
+        else if (key == "grid_label_every")
+        {
+            try
+            {
+                config.grid_label_every = std::max(1, std::stoi(value));
+            }
+            catch (...)
+            {
+            }
+        }
+        else if (key == "grid_background_tl")
+        {
+            config.grid_background_tl = parse_color(value, config.grid_background_tl);
+        }
+        else if (key == "grid_background_tr")
+        {
+            config.grid_background_tr = parse_color(value, config.grid_background_tr);
+        }
+        else if (key == "grid_background_bl")
+        {
+            config.grid_background_bl = parse_color(value, config.grid_background_bl);
+        }
+        else if (key == "grid_background_br")
+        {
+            config.grid_background_br = parse_color(value, config.grid_background_br);
+        }
+        else if (key == "grid_line_colour")
+        {
+            config.grid_line_colour = parse_color(value, config.grid_line_colour);
         }
         else if (key == "metadata_max_width")
         {
