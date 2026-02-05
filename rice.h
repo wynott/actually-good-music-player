@@ -17,8 +17,6 @@ class Rice
 public:
     Rice();
     void run(const app_config& config);
-    void set_terminal(Terminal* terminal);
-    void set_renderer(Renderer* renderer);
 
 private:
     void draw_frame(int frame);
@@ -31,8 +29,6 @@ private:
     glm::ivec2 _size = glm::ivec2(0);
     std::vector<std::string> _lines;
     glm::vec4 _art_colour = glm::vec4(1.0f);
-    Terminal* _terminal = nullptr;
-    Renderer* _renderer = nullptr;
 };
 
 inline const std::vector<std::string> kRiceArt = {

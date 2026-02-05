@@ -8,14 +8,6 @@
 #include <glm/vec2.hpp>
 #include <glm/vec4.hpp>
 
-struct TerminalSize
-{
-    int columns;
-    int rows;
-};
-
-TerminalSize get_terminal_size();
-
 class Terminal
 {
 public:
@@ -56,6 +48,7 @@ public:
 
     void on_terminal_resize();
     void shutdown();
+    void init();
     
     void update();
     void mark_all_dirty();

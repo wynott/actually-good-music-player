@@ -413,37 +413,18 @@ void AlbumArt::set_track(
     }
 }
 
-void AlbumArt::set_player(Player* player)
+void AlbumArt::update_from_player(Player* player,
+                                  const app_config& config,
+                                  int origin_x,
+                                  int origin_y)
 {
-    _player = player;
-}
+    
 
-void AlbumArt::set_terminal(Terminal* terminal)
-{
-    _terminal = terminal;
-}
-
-void AlbumArt::set_renderer(Renderer* renderer)
-{
-    _renderer = renderer;
-}
-
-void AlbumArt::update_from_player(
-    const app_config& config,
-    int origin_x,
-    int origin_y)
-{
-    if (!_player)
-    {
-        return;
-    }
-
-    player_context context = _player->get_context();
-    _player->ensure_context_from_track();
-    context = _player->get_context();
+    player->ensure_context_from_track();
+    auto context = player->get_context();
 
     set_track(
-        _player->get_current_track(),
+        player->get_current_track(),
         config,
         context.artist,
         context.album);
@@ -460,20 +441,21 @@ bool AlbumArt::render_current(
     int origin_y,
     app_config::rgb_color* out_avg_color)
 {
-    if (!_terminal)
-    {
-        return false;
-    }
-
     art_result snapshot;
     {
         std::lock_guard<std::mutex> lock(_mutex);
         snapshot = _result;
     }
 
-    TerminalSize size = get_terminal_size();
-    int max_cols = size.columns;
-    int max_rows = size.rows;
+    auto renderer = Renderer::get();
+    if (!renderer)
+    {
+        return false;
+    }
+    auto size = renderer->get_terminal_size();
+
+    int max_cols = size.x;
+    int max_rows = size.y;
     if (max_cols <= 0 || max_rows <= 0)
     {
         return false;
@@ -489,7 +471,7 @@ bool AlbumArt::render_current(
         return false;
     }
 
-    int top_left_y = size.rows - origin_y - out_h;
+    int top_left_y = size.y - origin_y - out_h;
     set_location(glm::ivec2(origin_x, top_left_y));
     set_size(glm::ivec2(out_w, out_h));
 
@@ -506,28 +488,26 @@ bool AlbumArt::render_current(
     if (!snapshot.ready || !snapshot.has_art)
     {
         clear_and_set_avg(glm::vec4(0.0f));
-        if (_renderer)
-        {
-            _renderer->set_canvas(
-                glm::vec4(config.rice_background_tl.r, config.rice_background_tl.g, config.rice_background_tl.b, 1.0f),
-                glm::vec4(config.rice_background_tr.r, config.rice_background_tr.g, config.rice_background_tr.b, 1.0f),
-                glm::vec4(config.rice_background_bl.r, config.rice_background_bl.g, config.rice_background_bl.b, 1.0f),
-                glm::vec4(config.rice_background_br.r, config.rice_background_br.g, config.rice_background_br.b, 1.0f));
-        }
+
+        renderer->set_canvas(
+            glm::vec4(config.rice_background_tl.r, config.rice_background_tl.g, config.rice_background_tl.b, 1.0f),
+            glm::vec4(config.rice_background_tr.r, config.rice_background_tr.g, config.rice_background_tr.b, 1.0f),
+            glm::vec4(config.rice_background_bl.r, config.rice_background_bl.g, config.rice_background_bl.b, 1.0f),
+            glm::vec4(config.rice_background_br.r, config.rice_background_br.g, config.rice_background_br.b, 1.0f));
+
         return true;
     }
 
     if (!load(snapshot.data))
     {
         clear_and_set_avg(glm::vec4(0.0f));
-        if (_renderer)
-        {
-            _renderer->set_canvas(
-                glm::vec4(config.rice_background_tl.r, config.rice_background_tl.g, config.rice_background_tl.b, 1.0f),
-                glm::vec4(config.rice_background_tr.r, config.rice_background_tr.g, config.rice_background_tr.b, 1.0f),
-                glm::vec4(config.rice_background_bl.r, config.rice_background_bl.g, config.rice_background_bl.b, 1.0f),
-                glm::vec4(config.rice_background_br.r, config.rice_background_br.g, config.rice_background_br.b, 1.0f));
-        }
+
+        renderer->set_canvas(
+            glm::vec4(config.rice_background_tl.r, config.rice_background_tl.g, config.rice_background_tl.b, 1.0f),
+            glm::vec4(config.rice_background_tr.r, config.rice_background_tr.g, config.rice_background_tr.b, 1.0f),
+            glm::vec4(config.rice_background_bl.r, config.rice_background_bl.g, config.rice_background_bl.b, 1.0f),
+            glm::vec4(config.rice_background_br.r, config.rice_background_br.g, config.rice_background_br.b, 1.0f));
+
         return true;
     }
 
@@ -537,10 +517,7 @@ bool AlbumArt::render_current(
     glm::vec4 avg_br(0.0f);
     average_colour(avg_tl, avg_tr, avg_bl, avg_br);
     clear_and_set_avg((avg_tl + avg_tr + avg_bl + avg_br) * 0.25f);
-    if (_renderer)
-    {
-        _renderer->set_canvas(avg_tl, avg_tr, avg_bl, avg_br);
-    }
+    renderer->set_canvas(avg_tl, avg_tr, avg_bl, avg_br);
 
     draw();
     return true;
@@ -630,43 +607,44 @@ void AlbumArt::draw() const
         return;
     }
 
-    if (!_terminal)
+    Renderer* renderer = Renderer::get();
+    if (!renderer)
     {
         return;
     }
+    glm::ivec2 terminal_size = renderer->get_terminal_size();
 
-    Terminal& terminal = *_terminal;
-    glm::ivec2 terminal_size = terminal.get_size();
     if (terminal_size.x <= 0 || terminal_size.y <= 0)
     {
         return;
     }
 
-    for (int y = 0; y < _size.y; ++y)
+    int start_x = std::max(0, _location.x);
+    int start_y = std::max(0, _location.y);
+    int end_x = std::min(_location.x + _size.x, terminal_size.x);
+    int end_y = std::min(_location.y + _size.y, terminal_size.y);
+
+    if (start_x >= end_x || start_y >= end_y)
     {
-        int target_y = _location.y + y;
-        if (target_y < 0 || target_y >= terminal_size.y)
-        {
-            continue;
-        }
+        return;
+    }
 
-        for (int x = 0; x < _size.x; ++x)
+    for (int y = start_y; y < end_y; ++y)
+    {
+        int src_y = y - _location.y;
+        size_t row_offset = static_cast<size_t>(src_y * _size.x);
+        for (int x = start_x; x < end_x; ++x)
         {
-            int target_x = _location.x + x;
-            if (target_x < 0 || target_x >= terminal_size.x)
-            {
-                continue;
-            }
-
-            size_t src_index = static_cast<size_t>(y * _size.x + x);
+            int src_x = x - _location.x;
+            size_t src_index = row_offset + static_cast<size_t>(src_x);
             if (src_index >= _pixels.size())
             {
                 continue;
             }
 
             const Terminal::Character& src = _pixels[src_index];
-            terminal.set_glyph(
-                glm::ivec2(target_x, target_y),
+            renderer->draw_glyph(
+                glm::ivec2(x, y),
                 src.get_glyph(),
                 src.get_glyph_colour(),
                 src.get_background_colour());

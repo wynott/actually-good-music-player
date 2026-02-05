@@ -98,9 +98,7 @@ public:
     void give_focus(Browser* target);
     void set_left(Browser* left);
     void set_right(Browser* right);
-    void set_player(Player* player);
-    void set_terminal(Terminal* terminal);
-    void set_renderer(Renderer* renderer);
+
     void set_colours(
         const glm::vec4& normal_fg,
         const glm::vec4& selected_fg,
@@ -118,7 +116,6 @@ public:
     bool is_focused() const;
     Browser* get_left() const;
     Browser* get_right() const;
-    Player* get_player() const;
     std::string get_next_song_path() const;
     bool advance_to_next_song(std::string& out_path);
 
@@ -137,9 +134,7 @@ private:
     bool _is_focused = false;
     Browser* _left = nullptr;
     Browser* _right = nullptr;
-    Player* _player = nullptr;
-    Terminal* _terminal = nullptr;
-    Renderer* _renderer = nullptr;
+
     glm::vec4 _normal_fg = glm::vec4(0.941f, 0.941f, 0.941f, 1.0f);
     glm::vec4 _selected_fg = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
     glm::vec4 _selected_bg = glm::vec4(0.902f, 0.784f, 0.471f, 1.0f);

@@ -1,15 +1,17 @@
 #pragma once
 #include "browser.h"
-#include "draw.h"
 #include "player.h"
+#include "terminal.h"
 
 class ActuallyGoodMP
 {
 public:
-    ActuallyGoodMP();
+    ActuallyGoodMP() = default;
     void init();
     void run();
     void shutdown();
+
+    void init_browsers();
 
 private:
     // todo: add init_logging();
@@ -21,6 +23,5 @@ private:
     app_config _config;
     Player _player;
     Terminal _terminal;
-    Renderer _renderer;
 
 };

@@ -29,16 +29,6 @@ void SpectrumAnalyzer::set_bar_colour(const glm::vec4& colour)
     _bar_colour = colour;
 }
 
-void SpectrumAnalyzer::set_terminal(Terminal* terminal)
-{
-    _terminal = terminal;
-}
-
-void SpectrumAnalyzer::set_renderer(Renderer* renderer)
-{
-    _renderer = renderer;
-}
-
 void SpectrumAnalyzer::ensure_buffer()
 {
     if (_fft_size <= 0)
@@ -247,18 +237,17 @@ void SpectrumAnalyzer::draw()
 {
     spdlog::trace("SpectrumAnalyzer::draw()");
     
-    if (!_terminal)
-    {
-        return;
-    }
-
     if (_size.x <= 0 || _size.y <= 0)
     {
         return;
     }
 
-    Terminal& terminal = *_terminal;
-    glm::ivec2 terminal_size = terminal.get_size();
+    Renderer* renderer = Renderer::get();
+    if (!renderer)
+    {
+        return;
+    }
+    glm::ivec2 terminal_size = renderer->get_terminal_size();
     if (terminal_size.x <= 0 || terminal_size.y <= 0)
     {
         return;
@@ -282,7 +271,7 @@ void SpectrumAnalyzer::draw()
         for (int x = min_x; x <= max_x; ++x)
         {
             glm::ivec2 cell_location(x, y);
-            terminal.set_glyph(
+            renderer->draw_glyph(
                 cell_location,
                 U' ',
                 _bar_colour,
@@ -348,7 +337,7 @@ void SpectrumAnalyzer::draw()
         {
             int draw_y = max_y - y;
             glm::ivec2 cell_location(draw_x, draw_y);
-            terminal.set_glyph(
+            renderer->draw_glyph(
                 cell_location,
                 U'█',
                 band_colour,
@@ -356,7 +345,6 @@ void SpectrumAnalyzer::draw()
         }
     }
     
-    Renderer& renderer = *_renderer;
     if (width >= 6)
     {
         struct label_info
@@ -395,14 +383,14 @@ void SpectrumAnalyzer::draw()
             {
                 x = max_start;
             }
-            renderer.draw_string(label.text, glm::ivec2(x, label_row));
+            renderer->draw_string(label.text, glm::ivec2(x, label_row));
         }
     }
 
     if (height >= 3)
     {
-        renderer.draw_string("0dB", glm::ivec2(min_x, min_y));
-        renderer.draw_string("-30", glm::ivec2(min_x, min_y + height / 2));
-        renderer.draw_string("-60", glm::ivec2(min_x, max_y));
+        renderer->draw_string("0dB", glm::ivec2(min_x, min_y));
+        renderer->draw_string("-30", glm::ivec2(min_x, min_y + height / 2));
+        renderer->draw_string("-60", glm::ivec2(min_x, max_y));
     }
 }

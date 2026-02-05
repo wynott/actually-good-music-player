@@ -6,14 +6,29 @@
 #include "spdlog/spdlog.h"
 #include "terminal.h"
 
+Renderer* Renderer::_instance = nullptr;
+
 Renderer::Renderer(Terminal& terminal)
     : _terminal(terminal)
 {
+    if (!_instance)
+    {
+        _instance = this;
+    }
 }
 
-const Terminal& Renderer::get_terminal() const
+Renderer* Renderer::init(Terminal& terminal)
 {
-    return _terminal;
+    if (!_instance)
+    {
+        _instance = new Renderer(terminal);
+    }
+    return _instance;
+}
+
+Renderer* Renderer::get()
+{
+    return _instance;
 }
 
 void Renderer::set_config(const app_config* config)
@@ -88,6 +103,12 @@ void Renderer::set_canvas(const glm::vec4& top_left, const glm::vec4& top_right,
     }
 
     _terminal.set_canvas(canvas);
+}
+
+void Renderer::set_canvas(const std::vector<Terminal::Character>& source)
+{
+    spdlog::trace("Renderer::set_canvas(buffer)");
+    _terminal.set_canvas(source);
 }
 
 void Renderer::draw_box(
@@ -360,4 +381,53 @@ void Renderer::draw_string_canvas_bg(
             foreground,
             glm::vec4(0.0f));
     }
+}
+
+void Renderer::draw_glyph(
+    const glm::ivec2& location,
+    char32_t glyph,
+    const glm::vec4& foreground,
+    const glm::vec4& background)
+{
+    spdlog::trace("Renderer::draw_glyph()");
+    _terminal.set_glyph(location, glyph, foreground, background);
+}
+
+void Renderer::clear_box(const glm::ivec2& min_corner, const glm::ivec2& size)
+{
+    spdlog::trace("Renderer::clear_box()");
+
+    if (size.x <= 0 || size.y <= 0)
+    {
+        return;
+    }
+
+    glm::ivec2 terminal_size = _terminal.get_size();
+    if (terminal_size.x <= 0 || terminal_size.y <= 0)
+    {
+        return;
+    }
+
+    int min_x = std::max(0, min_corner.x);
+    int min_y = std::max(0, min_corner.y);
+    int max_x = std::min(terminal_size.x - 1, min_corner.x + size.x - 1);
+    int max_y = std::min(terminal_size.y - 1, min_corner.y + size.y - 1);
+
+    if (min_x > max_x || min_y > max_y)
+    {
+        return;
+    }
+
+    for (int y = min_y; y <= max_y; ++y)
+    {
+        for (int x = min_x; x <= max_x; ++x)
+        {
+            _terminal.clear_cell(glm::ivec2(x, y));
+        }
+    }
+}
+
+glm::ivec2 Renderer::get_terminal_size() const
+{
+    return _terminal.get_size();
 }

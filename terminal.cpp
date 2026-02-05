@@ -1,4 +1,5 @@
 #include "terminal.h"
+#include "spdlog/spdlog.h"
 
 #include <algorithm>
 #include <glm/vec2.hpp>
@@ -43,6 +44,23 @@ static glm::ivec2 query_terminal_size_vec()
 #endif
 
     return size;
+}
+
+void Terminal::init()
+{
+#if defined(_WIN32)
+    HANDLE handle = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (handle != INVALID_HANDLE_VALUE)
+    {
+        SetConsoleOutputCP(CP_UTF8);
+        DWORD mode = 0;
+        if (GetConsoleMode(handle, &mode))
+        {
+            mode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING | ENABLE_PROCESSED_OUTPUT;
+            SetConsoleMode(handle, mode);
+        }
+    }
+#endif
 }
 
 static bool decode_utf8_first(const std::string& value, char32_t& out)
@@ -235,13 +253,6 @@ static std::string to_ansi_channel(const glm::vec4& colour, bool background)
     return sequence;
 }
 
-TerminalSize get_terminal_size()
-{
-    glm::ivec2 size = query_terminal_size_vec();
-    TerminalSize result{size.x, size.y};
-    return result;
-}
-
 Terminal::Terminal()
 {
     std::cout << "\x1b[?25l";
@@ -335,6 +346,11 @@ void Terminal::on_terminal_resize()
 
 glm::ivec2 Terminal::get_size() const
 {
+    if (_size.x <= 0 || _size.y <= 0)
+    {
+        spdlog::warn("Terminal size zero");
+    }
+
     return _size;
 }
 

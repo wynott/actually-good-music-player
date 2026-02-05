@@ -5,7 +5,6 @@
 #include <vector>
 
 #include "draw.h"
-#include "terminal.h"
 #include "miniaudio.h"
 
 static uint32_t read_be32(const uint8_t* data)
@@ -234,11 +233,6 @@ void MetadataPanel::set_size(const glm::ivec2& size)
     _size = size;
 }
 
-void MetadataPanel::set_renderer(Renderer* renderer)
-{
-    _renderer = renderer;
-}
-
 void MetadataPanel::draw(const app_config& config, const track_metadata& meta)
 {
     if (_size.x <= 0 || _size.y <= 0)
@@ -262,17 +256,14 @@ void MetadataPanel::draw(const app_config& config, const track_metadata& meta)
     int inner_width = std::max(0, _size.x - 2);
     int inner_height = std::max(0, _size.y - 2);
 
-    if (!_renderer)
+    if (auto renderer = Renderer::get())
     {
-        return;
-    }
-
-    Renderer& renderer = *_renderer;
-    renderer.draw_box(
+        renderer->draw_box(
         _location,
         _size,
         glm::vec4(1.0f),
         glm::vec4(0.0f));
+    }
 
     int max_lines = std::min(inner_height, static_cast<int>(lines.size()));
     for (int i = 0; i < max_lines; ++i)
@@ -287,6 +278,10 @@ void MetadataPanel::draw(const app_config& config, const track_metadata& meta)
         {
             line.resize(static_cast<size_t>(max_width));
         }
-        renderer.draw_string(line, glm::ivec2(_location.x + 1, _location.y + 1 + i));
+        
+        if (auto renderer = Renderer::get())
+        {
+            renderer->draw_string(line, glm::ivec2(_location.x + 1, _location.y + 1 + i));
+        }
     }
 }

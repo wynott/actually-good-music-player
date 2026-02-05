@@ -14,22 +14,8 @@
 
 Rice::Rice() = default;
 
-void Rice::set_terminal(Terminal* terminal)
-{
-    _terminal = terminal;
-}
-
-void Rice::set_renderer(Renderer* renderer)
-{
-    _renderer = renderer;
-}
-
 void Rice::run(const app_config& config)
 {
-    if (!_terminal || !_renderer)
-    {
-        return;
-    }
 
     load_art();
     _art_colour = glm::vec4(
@@ -37,11 +23,14 @@ void Rice::run(const app_config& config)
         static_cast<float>(config.rice_colour.g),
         static_cast<float>(config.rice_colour.b),
         1.0f);
-    _renderer->set_canvas(
-        glm::vec4(config.rice_background_tl.r, config.rice_background_tl.g, config.rice_background_tl.b, 1.0f),
-        glm::vec4(config.rice_background_tr.r, config.rice_background_tr.g, config.rice_background_tr.b, 1.0f),
-        glm::vec4(config.rice_background_bl.r, config.rice_background_bl.g, config.rice_background_bl.b, 1.0f),
-        glm::vec4(config.rice_background_br.r, config.rice_background_br.g, config.rice_background_br.b, 1.0f));
+    if (auto renderer = Renderer::get())
+    {
+        renderer->set_canvas(
+            glm::vec4(config.rice_background_tl.r, config.rice_background_tl.g, config.rice_background_tl.b, 1.0f),
+            glm::vec4(config.rice_background_tr.r, config.rice_background_tr.g, config.rice_background_tr.b, 1.0f),
+            glm::vec4(config.rice_background_bl.r, config.rice_background_bl.g, config.rice_background_bl.b, 1.0f),
+            glm::vec4(config.rice_background_br.r, config.rice_background_br.g, config.rice_background_br.b, 1.0f));
+    }
 
     for (int frame = 0; frame < 4; ++frame)
     {
@@ -172,8 +161,10 @@ void Rice::draw_frame(int frame)
         }
     }
 
-    Terminal& terminal = *_terminal;
-    terminal.set_canvas(_buffer);
+    if (auto renderer = Renderer::get())
+    {
+        renderer->set_canvas(_buffer);
+    }
 
     if (frame < 0)
     {
@@ -183,13 +174,23 @@ void Rice::draw_frame(int frame)
 
 glm::ivec2 Rice::get_center() const
 {
-    glm::ivec2 size = _terminal->get_size();
+    auto renderer = Renderer::get();
+    if (!renderer)
+    {
+        return glm::ivec2(0);
+    }
+    glm::ivec2 size = renderer->get_terminal_size();
     return glm::ivec2(size.x / 2, size.y / 2);
 }
 
 void Rice::ensure_buffer()
 {
-    glm::ivec2 size = _terminal->get_size();
+    auto renderer = Renderer::get();
+    if (!renderer)
+    {
+        return;
+    }
+    glm::ivec2 size = renderer->get_terminal_size();
     if (size != _size)
     {
         _size = size;
