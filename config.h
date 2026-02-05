@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 struct app_config
 {
@@ -35,6 +36,7 @@ struct app_config
     rgb_color rice_background_tr;
     rgb_color rice_background_bl;
     rgb_color rice_background_br;
+    std::vector<std::string> rice_art;
     int metadata_max_width;
     int metadata_origin_x;
     int metadata_origin_y;

@@ -1,8 +1,8 @@
 #include "rice.h"
 
-#include "app.h"
 #include "rice.h"
 
+#include "app.h"
 #include "canvas.h"
 #include "draw.h"
 #include "spdlog/spdlog.h"
@@ -19,7 +19,7 @@ Rice::Rice() = default;
 void Rice::run(const app_config& config)
 {
 
-    load_art();
+    load_art(config);
     _art_colour = glm::vec4(
         static_cast<float>(config.rice_colour.r),
         static_cast<float>(config.rice_colour.g),
@@ -27,7 +27,7 @@ void Rice::run(const app_config& config)
         1.0f);
     if (auto renderer = Renderer::get())
     {
-        Canvas* canvas = ActuallyGoodMP::instance().mutate_canvas();
+        Canvas* canvas = ActuallyGoodMP::instance().get_canvas();
         canvas->fill_gradient(
             glm::vec4(config.rice_background_tl.r, config.rice_background_tl.g, config.rice_background_tl.b, 1.0f),
             glm::vec4(config.rice_background_tr.r, config.rice_background_tr.g, config.rice_background_tr.b, 1.0f),
@@ -212,9 +212,9 @@ void Rice::clear_buffer()
     }
 }
 
-void Rice::load_art()
+void Rice::load_art(const app_config& config)
 {
-    _lines = kRiceArt;
+    _lines = config.rice_art;
     if (_lines.empty())
     {
         _lines.push_back("AGMP");

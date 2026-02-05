@@ -63,7 +63,8 @@ void Terminal::init()
     }
 #endif
 
-    _store.canvas = ActuallyGoodMP::instance().mutate_canvas()->mutate_buffer();
+    _store.canvas = ActuallyGoodMP::instance().get_canvas()->mutate_buffer();
+    _store.resize(_size.x, _size.y);
 }
 
 static bool decode_utf8_first(const std::string& value, char32_t& out)
@@ -283,7 +284,10 @@ void Terminal::BackingStore::resize(int width, int height)
     this->height = std::max(0, height);
     size_t count = static_cast<size_t>(this->width * this->height);
     buffer.assign(count, Character{});
-    canvas.assign(count, Character{});
+    if (canvas)
+    {
+        canvas->assign(count, Character{});
+    }
     dirty.assign(count, true);
 }
 
@@ -388,12 +392,12 @@ glm::vec4 Terminal::get_canvas_sample(const glm::ivec2& location) const
     }
 
     size_t index = get_index(location);
-    if (index >= _store.canvas.size())
+    if (!_store.canvas || index >= _store.canvas->size())
     {
         return glm::vec4(0.0f);
     }
 
-    const Character& cell = _store.canvas[index];
+    const Character& cell = (*_store.canvas)[index];
     return cell.get_background_colour();
 }
 
@@ -458,14 +462,14 @@ void Terminal::clear_cell(const glm::ivec2& location)
 
 void Terminal::set_canvas(const std::vector<Character>& source)
 {
-    if (source.size() != _store.canvas.size())
+    if (!_store.canvas || source.size() != _store.canvas->size())
     {
         return;
     }
 
     for (size_t i = 0; i < source.size(); ++i)
     {
-        _store.canvas[i] = source[i];
+        (*_store.canvas)[i] = source[i];
         _store.dirty[i] = true;
     }
 }
@@ -616,7 +620,7 @@ void Terminal::write_string_to_terminal(const glm::ivec2& location, std::size_t 
     {
         size_t index = start_index + offset;
         Character& buffer_cell = _store.buffer[index];
-        Character& canvas_cell = _store.canvas[index];
+        Character& canvas_cell = (*_store.canvas)[index];
         const Character* desired = &buffer_cell;
         if (is_empty_glyph(buffer_cell))
         {

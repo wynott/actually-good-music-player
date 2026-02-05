@@ -4,6 +4,28 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <vector>
+
+static const std::vector<std::string> kDefaultRiceArt = {
+    "                                                                          ",
+    "     ▄▄                         ▄▄ ▄▄          ▄   ▄▄▄▄                   ",
+    "   ▄█▀▀█▄         █▄             ██ ██         ▀██████▀                █▄ ",
+    "   ██  ██        ▄██▄            ██ ██           ██   ▄                ██ ",
+    "   ██▀▀██   ▄███▀ ██ ██ ██ ▄▀▀█▄ ██ ██ ██ ██     ██  ██ ▄███▄ ▄███▄ ▄████ ",
+    " ▄ ██  ██   ██    ██ ██ ██ ▄█▀██ ██ ██ ██▄██     ██  ██ ██ ██ ██ ██ ██ ██ ",
+    " ▀██▀  ▀█▄█▄▀███▄▄██▄▀██▀█▄▀█▄██▄██▄██▄▄▀██▀     ▀█████▄▀███▀▄▀███▀▄█▀███ ",
+    "                                         ██      ▄   ██                   ",
+    "                                       ▀▀▀       ▀████▀                   ",
+    "                                                                          ",
+    "  ▄▄▄     ▄▄▄                          ▄▄▄▄▄▄  ▄▄                         ",
+    "   ███▄ ▄███                          █▀██▀▀▀█▄ ██                        ",
+    "   ██ ▀█▀ ██               ▀▀           ██▄▄▄█▀ ██                   ▄    ",
+    "   ██     ██   ██ ██ ▄██▀█ ██ ▄███▀     ██▀▀▀   ██ ▄▀▀█▄ ██ ██ ▄█▀█▄ ████▄",
+    "   ██     ██   ██ ██ ▀███▄ ██ ██      ▄ ██      ██ ▄█▀██ ██▄██ ██▄█▀ ██   ",
+    " ▀██▀     ▀██▄▄▀██▀██▄▄██▀▄██▄▀███▄   ▀██▀     ▄██▄▀█▄██▄▄▀██▀▄▀█▄▄▄▄█▀   ",
+    "                                                           ██             ",
+    "                                                         ▀▀▀              "
+};
 
 static std::string trim(std::string value)
 {
@@ -99,6 +121,7 @@ app_config load_config(const std::string& path)
     config.rice_background_tr = {0.082f, 0.086f, 0.106f};
     config.rice_background_bl = {0.090f, 0.094f, 0.114f};
     config.rice_background_br = {0.173f, 0.204f, 0.227f};
+    config.rice_art = kDefaultRiceArt;
     config.metadata_max_width = 48;
     config.metadata_origin_x = config.art_width_chars + 2;
     config.metadata_origin_y = 3;
@@ -123,10 +146,10 @@ app_config load_config(const std::string& path)
         return config;
     }
 
-    std::string line;
-    while (std::getline(file, line))
+    std::string raw_line;
+    while (std::getline(file, raw_line))
     {
-        line = trim(line);
+        std::string line = trim(raw_line);
         if (line.empty())
         {
             continue;
@@ -144,6 +167,41 @@ app_config load_config(const std::string& path)
 
         std::string key = trim(line.substr(0, eq));
         std::string value = trim(line.substr(eq + 1));
+
+        if (key == "rice_art")
+        {
+            if (value == "\"\"\"")
+            {
+                std::vector<std::string> lines;
+                while (std::getline(file, raw_line))
+                {
+                    std::string trimmed = trim(raw_line);
+                    if (trimmed == "\"\"\"")
+                    {
+                        break;
+                    }
+                    if (!raw_line.empty() && raw_line.back() == '\r')
+                    {
+                        raw_line.pop_back();
+                    }
+                    lines.push_back(raw_line);
+                }
+                if (!lines.empty())
+                {
+                    config.rice_art = std::move(lines);
+                }
+            }
+            else
+            {
+                value = strip_quotes(value);
+                if (!value.empty())
+                {
+                    config.rice_art = {value};
+                }
+            }
+            continue;
+        }
+
         value = strip_quotes(value);
 
         if (key == "default_track")
