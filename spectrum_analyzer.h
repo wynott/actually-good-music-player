@@ -17,7 +17,6 @@ public:
 
     void set_location(const glm::ivec2& location);
     void set_size(const glm::ivec2& size);
-    void set_bar_colour(const glm::vec4& colour);
 
     void push_samples(const float* interleaved, int frames, int channels);
     void update();
@@ -29,7 +28,6 @@ private:
 
     glm::ivec2 _location = glm::ivec2(0);
     glm::ivec2 _size = glm::ivec2(0);
-    glm::vec4 _bar_colour = glm::vec4(0.941f, 0.941f, 0.941f, 1.0f);
 
     std::mutex _mutex;
     std::vector<float> _ring;

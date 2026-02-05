@@ -3,7 +3,10 @@
 #include <algorithm>
 #include <filesystem>
 
+#include <glm/vec4.hpp>
+
 #include "browser.h"
+#include "app.h"
 #include "draw.h"
 #include "event.h"
 #include "input.h"
@@ -394,20 +397,6 @@ void Browser::set_right(Browser* right)
     _right = right;
 }
 
-void Browser::set_colours(
-    const glm::vec4& normal_fg,
-    const glm::vec4& selected_fg,
-    const glm::vec4& selected_bg,
-    const glm::vec4& inactive_fg,
-    const glm::vec4& inactive_bg)
-{
-    _normal_fg = normal_fg;
-    _selected_fg = selected_fg;
-    _selected_bg = selected_bg;
-    _inactive_fg = inactive_fg;
-    _inactive_bg = inactive_bg;
-}
-
 const glm::ivec2& Browser::get_location() const
 {
     return _location;
@@ -547,10 +536,25 @@ void Browser::draw() const
         return;
     }
 
+    const app_config& config = ActuallyGoodMP::instance().get_config();
+    auto to_vec4 = [](const app_config::rgb_color& color)
+    {
+        return glm::vec4(
+            static_cast<float>(color.r),
+            static_cast<float>(color.g),
+            static_cast<float>(color.b),
+            1.0f);
+    };
+
+    glm::vec4 normal_fg = to_vec4(config.browser_normal_fg);
+    glm::vec4 selected_fg = to_vec4(config.browser_selected_fg);
+    glm::vec4 selected_bg = to_vec4(config.browser_selected_bg);
+    glm::vec4 unfocused_selected_fg = to_vec4(config.browser_inactive_bg);
+
     renderer->draw_box(
         _location,
         _size,
-        _normal_fg,
+        normal_fg,
         glm::vec4(0.0f));
 
     int inner_width = _size.x - 2;
@@ -606,15 +610,15 @@ void Browser::draw() const
         glm::ivec2 row_location(_location.x + 1, list_start_y + static_cast<int>(i));
         if (is_selected && _is_focused)
         {
-            renderer->draw_string_coloured(line, row_location, _selected_fg, _selected_bg);
+            renderer->draw_string_coloured(line, row_location, selected_fg, selected_bg);
         }
         else if (is_selected)
         {
-            renderer->draw_string_canvas_bg(line, row_location, glm::vec4(0.627f, 0.627f, 0.627f, 1.0f));
+            renderer->draw_string_canvas_bg(line, row_location, unfocused_selected_fg);
         }
         else
         {
-            renderer->draw_string_canvas_bg(line, row_location, _normal_fg);
+            renderer->draw_string_canvas_bg(line, row_location, normal_fg);
         }
     }
 

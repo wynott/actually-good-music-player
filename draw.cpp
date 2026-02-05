@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include "draw.h"
+#include "app.h"
 #include "spdlog/spdlog.h"
 #include "terminal.h"
 
@@ -31,32 +32,15 @@ Renderer* Renderer::get()
     return _instance;
 }
 
-void Renderer::set_config(const app_config* config)
-{
-    _config = config;
-}
-
 static glm::vec4 to_vec4(const app_config::rgb_color& color)
 {
     return glm::vec4(color.r, color.g, color.b, 1.0f);
 }
 
-static glm::vec4 default_box_colour(const app_config* config)
+static glm::vec4 default_text_colour()
 {
-    if (config)
-    {
-        return to_vec4(config->ui_box_fg);
-    }
-    return glm::vec4(1.0f);
-}
-
-static glm::vec4 default_text_colour(const app_config* config)
-{
-    if (config)
-    {
-        return to_vec4(config->ui_text_fg);
-    }
-    return glm::vec4(1.0f);
+    const app_config& config = ActuallyGoodMP::instance().get_config();
+    return to_vec4(config.ui_text_fg);
 }
 
 void Renderer::set_canvas(const std::vector<Terminal::Character>& source)
@@ -203,7 +187,7 @@ void Renderer::draw_string(const std::string& text, const glm::ivec2& location)
         _terminal.set_glyph(
             cell_location,
             static_cast<char32_t>(static_cast<unsigned char>(text[i])),
-            default_text_colour(_config),
+            default_text_colour(),
             glm::vec4(0.0f));
     }
 }
@@ -244,7 +228,7 @@ void Renderer::draw_string_selected(const std::string& text, const glm::ivec2& l
         _terminal.set_glyph(
             cell_location,
             static_cast<char32_t>(static_cast<unsigned char>(text[i])),
-            default_text_colour(_config),
+            default_text_colour(),
             glm::vec4(0.0f));
     }
 }

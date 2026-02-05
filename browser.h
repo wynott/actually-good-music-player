@@ -99,12 +99,6 @@ public:
     void set_left(Browser* left);
     void set_right(Browser* right);
 
-    void set_colours(
-        const glm::vec4& normal_fg,
-        const glm::vec4& selected_fg,
-        const glm::vec4& selected_bg,
-        const glm::vec4& inactive_fg,
-        const glm::vec4& inactive_bg);
 
     const glm::ivec2& get_location() const;
     const glm::ivec2& get_size() const;
@@ -135,11 +129,6 @@ private:
     Browser* _left = nullptr;
     Browser* _right = nullptr;
 
-    glm::vec4 _normal_fg = glm::vec4(0.941f, 0.941f, 0.941f, 1.0f);
-    glm::vec4 _selected_fg = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
-    glm::vec4 _selected_bg = glm::vec4(0.902f, 0.784f, 0.471f, 1.0f);
-    glm::vec4 _inactive_fg = glm::vec4(0.078f, 0.078f, 0.078f, 1.0f);
-    glm::vec4 _inactive_bg = glm::vec4(0.627f, 0.627f, 0.627f, 1.0f);
     glm::vec4 _canvas_sample = glm::vec4(-1.0f);
 
 private:

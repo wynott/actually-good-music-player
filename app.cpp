@@ -155,12 +155,6 @@ void ActuallyGoodMP::run()
 
     analyzer.set_location(glm::ivec2(_config.spectrum_origin_x, _config.spectrum_origin_y));
     analyzer.set_size(glm::ivec2(_config.spectrum_width, _config.spectrum_height));
-    analyzer.set_bar_colour(glm::vec4(
-        static_cast<float>(_config.ui_text_fg.r),
-        static_cast<float>(_config.ui_text_fg.g),
-        static_cast<float>(_config.ui_text_fg.b),
-        1.0f));
-
     _player.set_spectrum_analyzer(&analyzer);
 
     _artist_browser.draw();
@@ -418,25 +412,6 @@ void ActuallyGoodMP::init_browsers()
     _artist_browser.set_focused(true);
     
     _player.set_song_browser(&_song_browser);
-
-    auto to_vec4 = [](const app_config::rgb_color& color)
-    {
-        return glm::vec4(
-            static_cast<float>(color.r),
-            static_cast<float>(color.g),
-            static_cast<float>(color.b),
-            1.0f);
-    };
-
-    glm::vec4 normal_fg = to_vec4(_config.browser_normal_fg);
-    glm::vec4 selected_fg = to_vec4(_config.browser_selected_fg);
-    glm::vec4 selected_bg = to_vec4(_config.browser_selected_bg);
-    glm::vec4 inactive_fg = to_vec4(_config.browser_inactive_fg);
-    glm::vec4 inactive_bg = to_vec4(_config.browser_inactive_bg);
-
-    _artist_browser.set_colours(normal_fg, selected_fg, selected_bg, inactive_fg, inactive_bg);
-    _album_browser.set_colours(normal_fg, selected_fg, selected_bg, inactive_fg, inactive_bg);
-    _song_browser.set_colours(normal_fg, selected_fg, selected_bg, inactive_fg, inactive_bg);
 
     _artist_browser.set_path(_config.library_path);
 }

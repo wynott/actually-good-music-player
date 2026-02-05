@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include "app.h"
 #include "draw.h"
 
 static constexpr float kPi = 3.14159265358979323846f;
@@ -22,11 +23,6 @@ void SpectrumAnalyzer::set_location(const glm::ivec2& location)
 void SpectrumAnalyzer::set_size(const glm::ivec2& size)
 {
     _size = size;
-}
-
-void SpectrumAnalyzer::set_bar_colour(const glm::vec4& colour)
-{
-    _bar_colour = colour;
 }
 
 void SpectrumAnalyzer::ensure_buffer()
@@ -247,6 +243,13 @@ void SpectrumAnalyzer::draw()
     {
         return;
     }
+
+    const app_config& config = ActuallyGoodMP::instance().get_config();
+    glm::vec4 bar_colour(
+        static_cast<float>(config.ui_text_fg.r),
+        static_cast<float>(config.ui_text_fg.g),
+        static_cast<float>(config.ui_text_fg.b),
+        1.0f);
     glm::ivec2 terminal_size = renderer->get_terminal_size();
     if (terminal_size.x <= 0 || terminal_size.y <= 0)
     {
@@ -274,7 +277,7 @@ void SpectrumAnalyzer::draw()
             renderer->draw_glyph(
                 cell_location,
                 U' ',
-                _bar_colour,
+                bar_colour,
                 glm::vec4(0.0f));
         }
     }
@@ -312,7 +315,7 @@ void SpectrumAnalyzer::draw()
         }
 
         float t = (width > 1) ? static_cast<float>(x) / static_cast<float>(width - 1) : 0.0f;
-        glm::vec4 band_colour = _bar_colour;
+        glm::vec4 band_colour = bar_colour;
         if (t < 0.5f)
         {
             float u = t / 0.5f;
