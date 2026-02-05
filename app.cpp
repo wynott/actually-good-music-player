@@ -7,6 +7,7 @@
 #include <string>
 #include <thread>
 
+#include "app.h"
 #include "album_art.h"
 #include "draw.h"
 #include "event.h"
@@ -37,6 +38,12 @@ static char normalize_key(char value)
         return static_cast<char>(ch - 'A' + 'a');
     }
     return value;
+}
+
+ActuallyGoodMP& ActuallyGoodMP::instance()
+{
+    static ActuallyGoodMP app;
+    return app;
 }
 
 static int map_navigation_key(const app_config& config, int key)

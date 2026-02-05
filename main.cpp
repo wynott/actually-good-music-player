@@ -4,8 +4,8 @@ int main()
 {
     // todo: move logging init here
 
-    ActuallyGoodMP player;
-    player.init();
-    player.run();
-    player.shutdown();
+    auto& app = ActuallyGoodMP::instance();
+    app.init();
+    app.run();
+    app.shutdown();
 }
