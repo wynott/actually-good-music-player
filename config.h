@@ -19,12 +19,11 @@ struct app_config
     bool safe_mode;
     struct rgb_color
     {
-        int r;
-        int g;
-        int b;
+        float r;
+        float g;
+        float b;
     };
     rgb_color browser_normal_fg;
-    rgb_color browser_normal_bg;
     rgb_color browser_selected_fg;
     rgb_color browser_selected_bg;
     rgb_color browser_inactive_fg;
@@ -37,12 +36,21 @@ struct app_config
     rgb_color rice_background_bl;
     rgb_color rice_background_br;
     int metadata_max_width;
+    int metadata_origin_x;
+    int metadata_origin_y;
+    int metadata_width;
+    int metadata_height;
+    int spectrum_origin_x;
+    int spectrum_origin_y;
+    int spectrum_width;
+    int spectrum_height;
     int col_width_artist;
     int col_width_album;
     int col_width_song;
     int art_width_chars;
     int art_height_chars;
     int browser_padding;
+    int target_refresh_rate;
     int listen_port;
 };
 

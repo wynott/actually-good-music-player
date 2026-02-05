@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <fstream>
+#include <sstream>
 #include <string>
 
 static std::string trim(std::string value)
@@ -38,43 +39,35 @@ static std::string strip_quotes(std::string value)
 
 static app_config::rgb_color parse_color(const std::string& value, app_config::rgb_color fallback)
 {
-    if (value.size() != 7 || value[0] != '#')
+    std::string cleaned = value;
+    std::replace(cleaned.begin(), cleaned.end(), ',', ' ');
+
+    std::istringstream stream(cleaned);
+    float r = 0.0f;
+    float g = 0.0f;
+    float b = 0.0f;
+    if (!(stream >> r >> g >> b))
     {
         return fallback;
     }
 
-    auto hex_value = [](char ch) -> int
+    auto clamp01 = [](float v)
     {
-        if (ch >= '0' && ch <= '9')
+        if (v < 0.0f)
         {
-            return ch - '0';
+            return 0.0f;
         }
-        if (ch >= 'a' && ch <= 'f')
+        if (v > 1.0f)
         {
-            return 10 + (ch - 'a');
+            return 1.0f;
         }
-        if (ch >= 'A' && ch <= 'F')
-        {
-            return 10 + (ch - 'A');
-        }
-        return -1;
+        return v;
     };
 
-    int r1 = hex_value(value[1]);
-    int r2 = hex_value(value[2]);
-    int g1 = hex_value(value[3]);
-    int g2 = hex_value(value[4]);
-    int b1 = hex_value(value[5]);
-    int b2 = hex_value(value[6]);
-    if (r1 < 0 || r2 < 0 || g1 < 0 || g2 < 0 || b1 < 0 || b2 < 0)
-    {
-        return fallback;
-    }
-
     app_config::rgb_color result;
-    result.r = (r1 << 4) | r2;
-    result.g = (g1 << 4) | g2;
-    result.b = (b1 << 4) | b2;
+    result.r = clamp01(r);
+    result.g = clamp01(g);
+    result.b = clamp01(b);
     return result;
 }
 
@@ -94,26 +87,34 @@ app_config load_config(const std::string& path)
     config.search_key = '/';
     config.auto_resume_playback = true;
     config.safe_mode = false;
-    config.browser_normal_fg = {240, 240, 240};
-    config.browser_normal_bg = {24, 24, 24};
-    config.browser_selected_fg = {0, 0, 0};
-    config.browser_selected_bg = {230, 200, 120};
-    config.browser_inactive_fg = {20, 20, 20};
-    config.browser_inactive_bg = {160, 160, 160};
-    config.ui_box_fg = {240, 240, 240};
-    config.ui_text_fg = {240, 240, 240};
-    config.rice_colour = {247, 185, 85};
-    config.rice_background_tl = {22, 22, 27};
-    config.rice_background_tr = {21, 22, 27};
-    config.rice_background_bl = {23, 24, 29};
-    config.rice_background_br = {44, 52, 58};
+    config.browser_normal_fg = {0.941f, 0.941f, 0.941f};
+    config.browser_selected_fg = {0.0f, 0.0f, 0.0f};
+    config.browser_selected_bg = {0.902f, 0.784f, 0.471f};
+    config.browser_inactive_fg = {0.078f, 0.078f, 0.078f};
+    config.browser_inactive_bg = {0.627f, 0.627f, 0.627f};
+    config.ui_box_fg = {0.941f, 0.941f, 0.941f};
+    config.ui_text_fg = {0.941f, 0.941f, 0.941f};
+    config.rice_colour = {0.969f, 0.725f, 0.333f};
+    config.rice_background_tl = {0.086f, 0.086f, 0.106f};
+    config.rice_background_tr = {0.082f, 0.086f, 0.106f};
+    config.rice_background_bl = {0.090f, 0.094f, 0.114f};
+    config.rice_background_br = {0.173f, 0.204f, 0.227f};
     config.metadata_max_width = 48;
+    config.metadata_origin_x = config.art_width_chars + 2;
+    config.metadata_origin_y = 3;
+    config.metadata_width = config.metadata_max_width > 0 ? config.metadata_max_width + 2 : 32;
+    config.metadata_height = 12;
+    config.spectrum_origin_x = config.metadata_origin_x;
+    config.spectrum_origin_y = config.metadata_origin_y + config.metadata_height + 1;
+    config.spectrum_width = config.metadata_width;
+    config.spectrum_height = 8;
     config.col_width_artist = 20;
     config.col_width_album = 24;
     config.col_width_song = 30;
     config.art_width_chars = 80;
     config.art_height_chars = 40;
     config.browser_padding = 0;
+    config.target_refresh_rate = 60;
     config.listen_port = 4242;
 
     std::ifstream file(path);
@@ -250,10 +251,6 @@ app_config load_config(const std::string& path)
         {
             config.browser_normal_fg = parse_color(value, config.browser_normal_fg);
         }
-        else if (key == "browser_normal_bg")
-        {
-            config.browser_normal_bg = parse_color(value, config.browser_normal_bg);
-        }
         else if (key == "browser_selected_fg")
         {
             config.browser_selected_fg = parse_color(value, config.browser_selected_fg);
@@ -303,6 +300,86 @@ app_config load_config(const std::string& path)
             try
             {
                 config.metadata_max_width = std::max(10, std::stoi(value));
+            }
+            catch (...)
+            {
+            }
+        }
+        else if (key == "metadata_origin_x")
+        {
+            try
+            {
+                config.metadata_origin_x = std::max(0, std::stoi(value));
+            }
+            catch (...)
+            {
+            }
+        }
+        else if (key == "metadata_origin_y")
+        {
+            try
+            {
+                config.metadata_origin_y = std::max(0, std::stoi(value));
+            }
+            catch (...)
+            {
+            }
+        }
+        else if (key == "metadata_width")
+        {
+            try
+            {
+                config.metadata_width = std::max(1, std::stoi(value));
+            }
+            catch (...)
+            {
+            }
+        }
+        else if (key == "metadata_height")
+        {
+            try
+            {
+                config.metadata_height = std::max(1, std::stoi(value));
+            }
+            catch (...)
+            {
+            }
+        }
+        else if (key == "spectrum_origin_x")
+        {
+            try
+            {
+                config.spectrum_origin_x = std::max(0, std::stoi(value));
+            }
+            catch (...)
+            {
+            }
+        }
+        else if (key == "spectrum_origin_y")
+        {
+            try
+            {
+                config.spectrum_origin_y = std::max(0, std::stoi(value));
+            }
+            catch (...)
+            {
+            }
+        }
+        else if (key == "spectrum_width")
+        {
+            try
+            {
+                config.spectrum_width = std::max(1, std::stoi(value));
+            }
+            catch (...)
+            {
+            }
+        }
+        else if (key == "spectrum_height")
+        {
+            try
+            {
+                config.spectrum_height = std::max(1, std::stoi(value));
             }
             catch (...)
             {
@@ -363,6 +440,16 @@ app_config load_config(const std::string& path)
             try
             {
                 config.browser_padding = std::max(0, std::stoi(value));
+            }
+            catch (...)
+            {
+            }
+        }
+        else if (key == "target_refresh_rate")
+        {
+            try
+            {
+                config.target_refresh_rate = std::max(1, std::stoi(value));
             }
             catch (...)
             {

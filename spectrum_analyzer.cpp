@@ -1,4 +1,6 @@
 #include "spectrum_analyzer.h"
+#include "spdlog/spdlog.h"
+#include "spectrum_analyzer.h"
 
 #include <algorithm>
 #include <cmath>
@@ -25,6 +27,16 @@ void SpectrumAnalyzer::set_size(const glm::ivec2& size)
 void SpectrumAnalyzer::set_bar_colour(const glm::vec3& colour)
 {
     _bar_colour = colour;
+}
+
+void SpectrumAnalyzer::set_terminal(Terminal* terminal)
+{
+    _terminal = terminal;
+}
+
+void SpectrumAnalyzer::set_renderer(Renderer* renderer)
+{
+    _renderer = renderer;
 }
 
 void SpectrumAnalyzer::ensure_buffer()
@@ -233,12 +245,19 @@ void SpectrumAnalyzer::compute_bands(const std::vector<float>& window)
 
 void SpectrumAnalyzer::draw()
 {
+    spdlog::trace("SpectrumAnalyzer::draw()");
+    
+    if (!_terminal)
+    {
+        return;
+    }
+
     if (_size.x <= 0 || _size.y <= 0)
     {
         return;
     }
 
-    Terminal& terminal = Terminal::instance();
+    Terminal& terminal = *_terminal;
     glm::ivec2 terminal_size = terminal.get_size();
     if (terminal_size.x <= 0 || terminal_size.y <= 0)
     {
@@ -258,30 +277,17 @@ void SpectrumAnalyzer::draw()
     int width = max_x - min_x + 1;
     int height = max_y - min_y + 1;
 
-    std::vector<Terminal::Character>& buffer = terminal.mutate_buffer();
-    int term_width = terminal_size.x;
-
     for (int y = min_y; y <= max_y; ++y)
     {
         for (int x = min_x; x <= max_x; ++x)
         {
-            size_t index = static_cast<size_t>(y * term_width + x);
-            if (index >= buffer.size())
-            {
-                continue;
-            }
             glm::ivec2 cell_location(x, y);
-            Terminal::Character& cell = buffer[index];
-            cell.set_glyph(U' ');
-            cell.set_foreground_colour(_bar_colour);
-            cell.set_background_colour(terminal.get_canvas_colour(cell_location));
+            terminal.set_glyph(
+                cell_location,
+                U' ',
+                _bar_colour,
+                terminal.get_canvas_colour(cell_location));
         }
-    }
-
-    if (_bands.empty())
-    {
-        terminal.write_region(glm::ivec2(min_x, min_y), glm::ivec2(max_x, max_y));
-        return;
     }
 
     for (int x = 0; x < width; ++x)
@@ -322,37 +328,33 @@ void SpectrumAnalyzer::draw()
         {
             float u = t / 0.5f;
             band_colour = glm::vec3(
-                64.0f + (255.0f - 64.0f) * u,
-                128.0f + (255.0f - 128.0f) * u,
-                255.0f);
+                0.251f + (1.0f - 0.251f) * u,
+                0.502f + (1.0f - 0.502f) * u,
+                1.0f);
         }
         else
         {
             float u = (t - 0.5f) / 0.5f;
             band_colour = glm::vec3(
-                255.0f,
-                255.0f - (255.0f - 96.0f) * u,
-                255.0f - (255.0f - 64.0f) * u);
+                1.0f,
+                1.0f - (1.0f - 0.376f) * u,
+                1.0f - (1.0f - 0.251f) * u);
         }
 
         int draw_x = min_x + x;
         for (int y = 0; y < bar_height; ++y)
         {
             int draw_y = max_y - y;
-            size_t index = static_cast<size_t>(draw_y * term_width + draw_x);
-            if (index >= buffer.size())
-            {
-                continue;
-            }
             glm::ivec2 cell_location(draw_x, draw_y);
-            Terminal::Character& cell = buffer[index];
-            cell.set_glyph(U'█');
-            cell.set_foreground_colour(band_colour);
-            cell.set_background_colour(terminal.get_canvas_colour(cell_location));
+            terminal.set_glyph(
+                cell_location,
+                U'█',
+                band_colour,
+                terminal.get_canvas_colour(cell_location));
         }
     }
-
-    Renderer& renderer = Renderer::instance();
+    
+    Renderer& renderer = *_renderer;
     if (width >= 6)
     {
         struct label_info
@@ -401,6 +403,4 @@ void SpectrumAnalyzer::draw()
         renderer.draw_string("-30", glm::ivec2(min_x, min_y + height / 2));
         renderer.draw_string("-60", glm::ivec2(min_x, max_y));
     }
-
-    terminal.write_region(glm::ivec2(min_x, min_y), glm::ivec2(max_x, max_y));
 }

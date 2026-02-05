@@ -1,7 +1,13 @@
-# Actually Good Music Player config
+# Actually Good Music Player
+# Config file for layout, input, and rendering.
 
-default_track = "01 High For This.mp3"
+# --- Library and playback ---
 library_path = "D:/Music"
+default_track = "01 High For This.mp3"
+auto_resume_playback = true
+safe_mode = false
+
+# --- Input ---
 play_pause_key = "k"
 quit_key = "q"
 nav_up_key = "w"
@@ -9,38 +15,59 @@ nav_down_key = "s"
 nav_left_key = "a"
 nav_right_key = "d"
 use_arrow_keys = true
-enable_online_art = false
-# Uses MusicBrainz + Cover Art Archive.
 search_key = "/"
-auto_resume_playback = true
-safe_mode = false
-browser_normal_fg = "#F0F0F0"
-browser_normal_bg = "#181818"
-browser_selected_fg = "#000000"
-browser_selected_bg = "#E6C878"
-browser_inactive_fg = "#141414"
-browser_inactive_bg = "#A0A0A0"
-ui_box_fg = "#F0F0F0"
-ui_text_fg = "#F0F0F0"
-rice_colour = "#F7B955"
-rice_background_tl = "#16161B"
-rice_background_tr = "#15161B"
-rice_background_bl = "#17181D"
-rice_background_br = "#2C343A"
-# Max characters for metadata lines before truncation
-metadata_max_width = 32
-# browser_normal_fg: light gray
-# browser_normal_bg: near black
-# browser_selected_fg: black
-# browser_selected_bg: warm gold
-# browser_inactive_fg: dark gray
-# browser_inactive_bg: mid gray
+
+# --- Network ---
+listen_port = 4242
+# Routers usually block inbound traffic unless port-forwarded.
+
+# --- Performance ---
+# target_refresh_rate controls the main loop timing in Hz.
+target_refresh_rate = 60
+
+# --- Browser layout ---
 col_width_artist = 20
 col_width_album = 24
 col_width_song = 30
+browser_padding = 0
+
+# --- Album art layout ---
+# Terminal characters are not square; adjust width/height per font.
 art_width_chars = 40
 art_height_chars = 20
-browser_padding = 0
-# Note: terminal characters are not square; adjust width/height per font.
-listen_port = 4242
-# Note: routers usually block inbound traffic unless port-forwarded.
+
+# --- Metadata panel layout ---
+# Max characters for metadata lines before truncation.
+metadata_max_width = 32
+metadata_origin_x = 100
+metadata_origin_y = 3
+metadata_width = 34
+metadata_height = 12
+
+# --- Spectrum analyzer layout ---
+spectrum_origin_x = 100
+spectrum_origin_y = 16
+spectrum_width = 34
+spectrum_height = 8
+
+# --- Browser colors (RGB 0..1) ---
+browser_normal_fg = "0.941, 0.941, 0.941"
+browser_selected_fg = "0.000, 0.000, 0.000"
+browser_selected_bg = "0.902, 0.784, 0.471"
+browser_inactive_fg = "0.078, 0.078, 0.078"
+browser_inactive_bg = "0.627, 0.627, 0.627"
+
+# --- UI colors (RGB 0..1) ---
+ui_box_fg = "0.941, 0.941, 0.941"
+ui_text_fg = "0.941, 0.941, 0.941"
+
+# --- Rice splash (RGB 0..1) ---
+rice_colour = "0.969, 0.725, 0.333"
+rice_background_tl = "0.086, 0.086, 0.106"
+rice_background_tr = "0.082, 0.086, 0.106"
+rice_background_bl = "0.090, 0.094, 0.114"
+rice_background_br = "0.173, 0.204, 0.227"
+
+# --- Online art ---
+# Uses MusicBrainz + Cover Art Archive.
+enable_online_art = false

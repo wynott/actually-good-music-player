@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "album_art.h"
+#include "spdlog/spdlog.h"
 #include "terminal.h"
 
 #define STB_IMAGE_IMPLEMENTATION
@@ -417,6 +418,16 @@ void AlbumArt::set_player(Player* player)
     _player = player;
 }
 
+void AlbumArt::set_terminal(Terminal* terminal)
+{
+    _terminal = terminal;
+}
+
+void AlbumArt::set_renderer(Renderer* renderer)
+{
+    _renderer = renderer;
+}
+
 void AlbumArt::update_from_player(
     const app_config& config,
     int origin_x,
@@ -449,6 +460,11 @@ bool AlbumArt::render_current(
     int origin_y,
     app_config::rgb_color* out_avg_color)
 {
+    if (!_terminal)
+    {
+        return false;
+    }
+
     art_result snapshot;
     {
         std::lock_guard<std::mutex> lock(_mutex);
@@ -479,7 +495,6 @@ bool AlbumArt::render_current(
 
     auto clear_and_set_avg = [&](const glm::vec3& colour)
     {
-        Terminal::instance().scan_and_write_characters();
         if (out_avg_color)
         {
             out_avg_color->r = static_cast<int>(colour.r + 0.5f);
@@ -491,12 +506,28 @@ bool AlbumArt::render_current(
     if (!snapshot.ready || !snapshot.has_art)
     {
         clear_and_set_avg(glm::vec3(0.0f));
+        if (_renderer)
+        {
+            _renderer->set_canvas(
+                glm::vec3(config.rice_background_tl.r, config.rice_background_tl.g, config.rice_background_tl.b),
+                glm::vec3(config.rice_background_tr.r, config.rice_background_tr.g, config.rice_background_tr.b),
+                glm::vec3(config.rice_background_bl.r, config.rice_background_bl.g, config.rice_background_bl.b),
+                glm::vec3(config.rice_background_br.r, config.rice_background_br.g, config.rice_background_br.b));
+        }
         return true;
     }
 
     if (!load(snapshot.data))
     {
         clear_and_set_avg(glm::vec3(0.0f));
+        if (_renderer)
+        {
+            _renderer->set_canvas(
+                glm::vec3(config.rice_background_tl.r, config.rice_background_tl.g, config.rice_background_tl.b),
+                glm::vec3(config.rice_background_tr.r, config.rice_background_tr.g, config.rice_background_tr.b),
+                glm::vec3(config.rice_background_bl.r, config.rice_background_bl.g, config.rice_background_bl.b),
+                glm::vec3(config.rice_background_br.r, config.rice_background_br.g, config.rice_background_br.b));
+        }
         return true;
     }
 
@@ -506,20 +537,12 @@ bool AlbumArt::render_current(
     glm::vec3 avg_br(0.0f);
     average_colour(avg_tl, avg_tr, avg_bl, avg_br);
     clear_and_set_avg((avg_tl + avg_tr + avg_bl + avg_br) * 0.25f);
-    Renderer::instance().set_canvas(avg_tl, avg_tr, avg_bl, avg_br);
+    if (_renderer)
     {
-        glm::ivec2 size = Terminal::instance().get_size();
-        if (size.x > 0 && size.y > 0)
-        {
-            Terminal::instance().write_region(glm::ivec2(0, 0), glm::ivec2(size.x - 1, size.y - 1));
-        }
+        _renderer->set_canvas(avg_tl, avg_tr, avg_bl, avg_br);
     }
 
     draw();
-    glm::ivec2 min_corner = get_location();
-    glm::ivec2 max_corner = min_corner + get_size() - glm::ivec2(1);
-    Terminal::instance().write_region(min_corner, max_corner);
-
     return true;
 }
 
@@ -583,12 +606,13 @@ bool AlbumArt::load_image_data(const std::vector<unsigned char>& image_data)
             int r = pixels[src_index + 0];
             int g = pixels[src_index + 1];
             int b = pixels[src_index + 2];
+            float inv = 1.0f / 255.0f;
 
             size_t dst_index = static_cast<size_t>(y * out_w + x);
             Terminal::Character& cell = _pixels[dst_index];
             cell.set_glyph(U'█');
-            cell.set_foreground_colour(glm::vec3(static_cast<float>(r), static_cast<float>(g), static_cast<float>(b)));
-            cell.set_background_colour(glm::vec3(static_cast<float>(r), static_cast<float>(g), static_cast<float>(b)));
+            cell.set_foreground_colour(glm::vec3(r * inv, g * inv, b * inv));
+            cell.set_background_colour(glm::vec3(r * inv, g * inv, b * inv));
         }
     }
 
@@ -598,20 +622,24 @@ bool AlbumArt::load_image_data(const std::vector<unsigned char>& image_data)
 
 void AlbumArt::draw() const
 {
+    spdlog::trace("AlbumArt::draw()");
+
     if (_pixels.empty() || _size.x <= 0 || _size.y <= 0)
     {
         return;
     }
 
-    Terminal& terminal = Terminal::instance();
+    if (!_terminal)
+    {
+        return;
+    }
+
+    Terminal& terminal = *_terminal;
     glm::ivec2 terminal_size = terminal.get_size();
     if (terminal_size.x <= 0 || terminal_size.y <= 0)
     {
         return;
     }
-
-    std::vector<Terminal::Character>& buffer = terminal.mutate_buffer();
-    int width = terminal_size.x;
 
     for (int y = 0; y < _size.y; ++y)
     {
@@ -635,17 +663,12 @@ void AlbumArt::draw() const
                 continue;
             }
 
-            size_t dst_index = static_cast<size_t>(target_y * width + target_x);
-            if (dst_index >= buffer.size())
-            {
-                continue;
-            }
-
             const Terminal::Character& src = _pixels[src_index];
-            Terminal::Character& dst = buffer[dst_index];
-            dst.set_glyph(src.get_glyph());
-            dst.set_foreground_colour(src.get_foreground_colour());
-            dst.set_background_colour(src.get_background_colour());
+            terminal.set_glyph(
+                glm::ivec2(target_x, target_y),
+                src.get_glyph(),
+                src.get_foreground_colour(),
+                src.get_background_colour());
         }
     }
 }

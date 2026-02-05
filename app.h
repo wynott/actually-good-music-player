@@ -1,6 +1,6 @@
 #pragma once
 #include "browser.h"
-#include "config.h"
+#include "draw.h"
 #include "player.h"
 
 class ActuallyGoodMP
@@ -20,5 +20,7 @@ private:
     Browser _song_browser;
     app_config _config;
     Player _player;
+    Terminal _terminal;
+    Renderer _renderer;
 
 };

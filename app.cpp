@@ -27,9 +27,8 @@
 #endif
 
 ActuallyGoodMP::ActuallyGoodMP()
+    : _renderer(_terminal)
 {
-    //_album_browser.set location  etc
-    //_artist_browser path = from config
 }
 
 static char normalize_key(char value)
@@ -100,75 +99,69 @@ void ActuallyGoodMP::init()
         _config.enable_online_art = false;
     }
 
-    int browser_gap = _config.browser_padding;
-    glm::ivec2 browser_origin(2, 3);
-    glm::ivec2 artist_browser_size(std::max(1, _config.col_width_artist + 2), 12);
-    glm::ivec2 album_browser_size(std::max(1, _config.col_width_album + 2), 12);
-    glm::ivec2 song_browser_size(std::max(1, _config.col_width_song + 2), 12);
+    Browser::init_all(_config,
+                      _terminal,
+                      _renderer,
+                      _artist_browser,
+                      _album_browser,
+                      _song_browser,
+                      _player);
 
-    _artist_browser.set_name("Artist");
-    _artist_browser.set_location(browser_origin);
-    _artist_browser.set_size(artist_browser_size);
-
-    _album_browser.set_name("Album");
-    _album_browser.set_location(glm::ivec2(browser_origin.x + artist_browser_size.x + browser_gap, browser_origin.y));
-    _album_browser.set_size(album_browser_size);
-
-    _song_browser.set_name("Song");
-    _song_browser.set_location(glm::ivec2(
-        browser_origin.x + artist_browser_size.x + browser_gap + album_browser_size.x + browser_gap,
-        browser_origin.y));
-    _song_browser.set_size(song_browser_size);
-
-    _artist_browser.set_right(&_album_browser);
-    _album_browser.set_left(&_artist_browser);
-    _album_browser.set_right(&_song_browser);
-    _song_browser.set_left(&_album_browser);
-    _artist_browser.set_focused(true);
-    _artist_browser.set_path(_config.library_path);
-    _song_browser.set_player(&_player);
-    _player.set_song_browser(&_song_browser);
-
-    Renderer::instance().set_canvas(glm::vec3(0.0f));
-    Renderer::instance().set_box_colour(glm::vec3(
-        static_cast<float>(_config.ui_box_fg.r),
-        static_cast<float>(_config.ui_box_fg.g),
-        static_cast<float>(_config.ui_box_fg.b)));
-    Renderer::instance().set_text_colour(glm::vec3(
-        static_cast<float>(_config.ui_text_fg.r),
-        static_cast<float>(_config.ui_text_fg.g),
-        static_cast<float>(_config.ui_text_fg.b)));
-    {
-        glm::ivec2 size = Terminal::instance().get_size();
-        if (size.x > 0 && size.y > 0)
-        {
-            Terminal::instance().write_region(glm::ivec2(0, 0), glm::ivec2(size.x - 1, size.y - 1));
-        }
-    }
+    _renderer.set_config(&_config);
 }
 
 void ActuallyGoodMP::run()
 {
     Rice rice;
+    rice.set_terminal(&_terminal);
+    rice.set_renderer(&_renderer);
     rice.run(_config);
 
     AlbumArt album_art;
+    
     MetadataPanel metadata_panel;
+
     SpectrumAnalyzer analyzer;
+
     album_art.set_player(&_player);
+    album_art.set_terminal(&_terminal);
+    album_art.set_renderer(&_renderer);
 
-    int metadata_origin_x = _config.art_width_chars + 2;
-    int metadata_width = _config.metadata_max_width > 0 ? _config.metadata_max_width + 2 : 32;
-    metadata_panel.set_location(glm::ivec2(metadata_origin_x + 1, 3));
-    metadata_panel.set_size(glm::ivec2(metadata_width, 12));
+    metadata_panel.set_renderer(&_renderer);
 
-    analyzer.set_location(glm::ivec2(metadata_origin_x + 1, 16));
-    analyzer.set_size(glm::ivec2(metadata_width, 8));
+    analyzer.set_terminal(&_terminal);
+    analyzer.set_renderer(&_renderer);
+
+    int metadata_origin_x = _config.metadata_origin_x;
+    int metadata_origin_y = _config.metadata_origin_y;
+    int metadata_width = _config.metadata_width;
+    int metadata_height = _config.metadata_height;
+    metadata_panel.set_location(glm::ivec2(metadata_origin_x, metadata_origin_y));
+    metadata_panel.set_size(glm::ivec2(metadata_width, metadata_height));
+
+    analyzer.set_location(glm::ivec2(_config.spectrum_origin_x, _config.spectrum_origin_y));
+    analyzer.set_size(glm::ivec2(_config.spectrum_width, _config.spectrum_height));
     analyzer.set_bar_colour(glm::vec3(
         static_cast<float>(_config.ui_text_fg.r),
         static_cast<float>(_config.ui_text_fg.g),
         static_cast<float>(_config.ui_text_fg.b)));
+
     _player.set_spectrum_analyzer(&analyzer);
+
+    _artist_browser.draw();
+    _album_browser.draw();
+    _song_browser.draw();
+    if (!_config.safe_mode)
+    {
+        track_metadata meta;
+        if (read_track_metadata(_player.get_current_track(), meta))
+        {
+            metadata_panel.draw(_config, meta);
+        }
+    }
+    _terminal.mark_all_dirty();
+    _terminal.update();
+
 
     net_info info;
     bool network_started = start_network(_config.listen_port, info);
@@ -176,7 +169,7 @@ void ActuallyGoodMP::run()
     if (network_started)
     {
         status_base = "IP: " + info.ip_address + ":" + std::to_string(info.port);
-        draw_status_line(status_base);
+        _renderer.draw_string(status_base, glm::ivec2(1, 1));
     }
 
     app_state state = load_state("state.toml");
@@ -216,17 +209,65 @@ void ActuallyGoodMP::run()
         _player.seek_ms(state.context.position_ms);
     }
 
+    using clock = std::chrono::steady_clock;
+    auto last_frame = clock::now();
+    double delta_time = 0.0;
+    double smoothed_fps = 0.0;
+    int target_rate = std::max(1, _config.target_refresh_rate);
+    double target_frame_time = 1.0 / static_cast<double>(target_rate);
+
+    _terminal.mark_all_dirty();
     bool quit = false;
     while (!quit)
     {
+        auto frame_start = clock::now();
+        delta_time = std::chrono::duration<double>(frame_start - last_frame).count();
+        last_frame = frame_start;
+        if (delta_time > 0.0)
+        {
+            double fps = 1.0 / delta_time;
+            if (smoothed_fps <= 0.0)
+            {
+                smoothed_fps = fps;
+            }
+            else
+            {
+                smoothed_fps = smoothed_fps * 0.9 + fps * 0.1;
+            }
+        }
+
         if (playback_active && _player.is_done())
         {
             _player.handle_track_finished();
         }
 
         album_art.update_from_player(_config, 0, 0);
+
+        _artist_browser.update_canvas_sample();
+        _album_browser.update_canvas_sample();
+        _song_browser.update_canvas_sample();
+
+        if (!_config.safe_mode)
+        {
+            track_metadata meta;
+            if (read_track_metadata(_player.get_current_track(), meta))
+            {
+                metadata_panel.draw(_config, meta);
+            }
+        }
+
         analyzer.update();
         analyzer.draw();
+
+        glm::ivec2 term_size = _terminal.get_size();
+        int fps_value = static_cast<int>(smoothed_fps + 0.5);
+        std::string fps_text = std::to_string(fps_value) + " fps";
+        int fps_x = term_size.x - static_cast<int>(fps_text.size());
+        if (fps_x < 0)
+        {
+            fps_x = 0;
+        }
+        _renderer.draw_string(fps_text, glm::ivec2(fps_x, 0));
 
         int raw_key = input_poll_key();
         int key = raw_key;
@@ -255,7 +296,14 @@ void ActuallyGoodMP::run()
             _artist_browser.update(key);
         }
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(16));
+        _terminal.update();
+        auto frame_end = clock::now();
+        double frame_time = std::chrono::duration<double>(frame_end - frame_start).count();
+        double sleep_time = target_frame_time - frame_time;
+        if (sleep_time > 0.0)
+        {
+            std::this_thread::sleep_for(std::chrono::duration<double>(sleep_time));
+        }
     }
 
     return;
@@ -271,9 +319,11 @@ void ActuallyGoodMP::shutdown()
     save.song_path = _song_browser.get_path().string();
     save.song_index = static_cast<int>(_song_browser.get_selected_index());
     save_state("state.toml", save);
+
     _player.stop_playback();
-    std::cout << "\x1b[2J\x1b[H\x1b[0m";
-    std::cout.flush();
+
+    _terminal.shutdown();
+    
     input_shutdown();
     http_cleanup();
     stop_network();

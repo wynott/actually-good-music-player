@@ -7,8 +7,11 @@
 #include <vector>
 
 class Player;
+class Terminal;
+class Renderer;
 
 #include <glm/vec2.hpp>
+#include <glm/vec3.hpp>
 
 #include "config.h"
 
@@ -100,6 +103,14 @@ public:
 class Browser
 {
 public:
+    static void init_all(
+        const app_config& config,
+        Terminal& terminal,
+        Renderer& renderer,
+        Browser& artist,
+        Browser& album,
+        Browser& song,
+        Player& player);
     Browser();
     Browser(const std::string& name, const std::filesystem::path& path, const glm::ivec2& location, const glm::ivec2& size);
 
@@ -112,13 +123,21 @@ public:
     void soft_select();
     void resize_to_fit_contents();
     void update(int key);
-    void redraw();
     void set_focused(bool focused);
     void receive_focus();
     void give_focus(Browser* target);
     void set_left(Browser* left);
     void set_right(Browser* right);
     void set_player(Player* player);
+    void set_terminal(Terminal* terminal);
+    void set_renderer(Renderer* renderer);
+    void set_colours(
+        const glm::vec3& normal_fg,
+        const glm::vec3& selected_fg,
+        const glm::vec3& selected_bg,
+        const glm::vec3& inactive_fg,
+        const glm::vec3& inactive_bg);
+    void update_canvas_sample();
 
     const glm::ivec2& get_location() const;
     const glm::ivec2& get_size() const;
@@ -150,6 +169,14 @@ private:
     Browser* _left = nullptr;
     Browser* _right = nullptr;
     Player* _player = nullptr;
+    Terminal* _terminal = nullptr;
+    Renderer* _renderer = nullptr;
+    glm::vec3 _normal_fg = glm::vec3(0.941f);
+    glm::vec3 _selected_fg = glm::vec3(0.0f);
+    glm::vec3 _selected_bg = glm::vec3(0.902f, 0.784f, 0.471f);
+    glm::vec3 _inactive_fg = glm::vec3(0.078f);
+    glm::vec3 _inactive_bg = glm::vec3(0.627f);
+    glm::vec3 _canvas_sample = glm::vec3(-1.0f);
 
 private:
     int get_visible_rows() const;

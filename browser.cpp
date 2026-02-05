@@ -7,6 +7,7 @@
 #include "draw.h"
 #include "input.h"
 #include "player.h"
+#include "spdlog/spdlog.h"
 #include "terminal.h"
 
 Browser::Browser() = default;
@@ -22,6 +23,68 @@ Browser::Browser(
       _path(path)
 {
     refresh_contents();
+}
+
+void Browser::init_all(
+    const app_config& config,
+    Terminal& terminal,
+    Renderer& renderer,
+    Browser& artist,
+    Browser& album,
+    Browser& song,
+    Player& player)
+{
+    int browser_gap = config.browser_padding;
+    glm::ivec2 browser_origin(2, 3);
+    glm::ivec2 artist_browser_size(std::max(1, config.col_width_artist + 2), 12);
+    glm::ivec2 album_browser_size(std::max(1, config.col_width_album + 2), 12);
+    glm::ivec2 song_browser_size(std::max(1, config.col_width_song + 2), 12);
+
+    artist.set_name("Artist");
+    artist.set_location(browser_origin);
+    artist.set_size(artist_browser_size);
+    album.set_name("Album");
+    album.set_location(glm::ivec2(browser_origin.x + artist_browser_size.x + browser_gap, browser_origin.y));
+    album.set_size(album_browser_size);
+    song.set_name("Song");
+    song.set_location(glm::ivec2(
+       browser_origin.x + artist_browser_size.x + browser_gap + album_browser_size.x + browser_gap,
+       browser_origin.y));
+    song.set_size(song_browser_size);
+
+    artist.set_right(&album);
+    album.set_left(&artist);
+    album.set_right(&song);
+    song.set_left(&album);
+    artist.set_focused(true);
+
+    artist.set_terminal(&terminal);
+    album.set_terminal(&terminal);
+    song.set_terminal(&terminal);
+    artist.set_renderer(&renderer);
+    album.set_renderer(&renderer);
+    song.set_renderer(&renderer);
+
+    song.set_player(&player);
+    player.set_song_browser(&song);
+
+    auto to_vec3 = [](const app_config::rgb_color& color)
+    {
+        return glm::vec3(
+            static_cast<float>(color.r),
+            static_cast<float>(color.g),
+            static_cast<float>(color.b));
+    };
+    glm::vec3 normal_fg = to_vec3(config.browser_normal_fg);
+    glm::vec3 selected_fg = to_vec3(config.browser_selected_fg);
+    glm::vec3 selected_bg = to_vec3(config.browser_selected_bg);
+    glm::vec3 inactive_fg = to_vec3(config.browser_inactive_fg);
+    glm::vec3 inactive_bg = to_vec3(config.browser_inactive_bg);
+    artist.set_colours(normal_fg, selected_fg, selected_bg, inactive_fg, inactive_bg);
+    album.set_colours(normal_fg, selected_fg, selected_bg, inactive_fg, inactive_bg);
+    song.set_colours(normal_fg, selected_fg, selected_bg, inactive_fg, inactive_bg);
+
+    artist.set_path(config.library_path);
 }
 
 void Browser::set_location(const glm::ivec2& location)
@@ -83,11 +146,6 @@ void FolderItem::on_soft_select()
     right->set_path(get_path());
     right->soft_select();
     right->draw();
-    {
-        glm::ivec2 min_corner = right->get_location();
-        glm::ivec2 max_corner = min_corner + right->get_size() - glm::ivec2(1);
-        Terminal::instance().write_region(min_corner, max_corner);
-    }
 }
 
 void FolderItem::scan_and_populate(
@@ -237,7 +295,6 @@ void Browser::move_selection(int direction)
     {
         glm::ivec2 min_corner = get_location();
         glm::ivec2 max_corner = min_corner + get_size() - glm::ivec2(1);
-        Terminal::instance().write_region(min_corner, max_corner);
     }
 
     if (_right)
@@ -248,6 +305,8 @@ void Browser::move_selection(int direction)
 
 void Browser::resize_to_fit_contents()
 {
+    spdlog::trace("Browser::resize_to_fit_contents()");
+
     glm::ivec2 previous_size = _size;
     size_t rows = _contents.size();
     int required = static_cast<int>(rows + 2);
@@ -257,7 +316,12 @@ void Browser::resize_to_fit_contents()
     }
     _size.y = required;
 
-    glm::ivec2 terminal_size = Terminal::instance().get_size();
+    if (!_terminal)
+    {
+        return;
+    }
+
+    glm::ivec2 terminal_size = _terminal->get_size();
     if (terminal_size.y > 0)
     {
         int max_height = terminal_size.y - 1 - _location.y;
@@ -276,7 +340,7 @@ void Browser::resize_to_fit_contents()
         return;
     }
 
-    Terminal& terminal = Terminal::instance();
+    Terminal& terminal = *_terminal;
     if (terminal_size.x <= 0 || terminal_size.y <= 0)
     {
         return;
@@ -294,33 +358,16 @@ void Browser::resize_to_fit_contents()
     int new_max_x = std::min(terminal_size.x, min_corner.x + _size.x);
     int new_max_y = std::min(terminal_size.y, min_corner.y + _size.y);
 
-    std::vector<Terminal::Character>& buffer = terminal.mutate_buffer();
-    int width = terminal_size.x;
     for (int y = start_y; y < max_y; ++y)
     {
         for (int x = start_x; x < max_x; ++x)
         {
             if (x >= new_max_x || y >= new_max_y)
             {
-                size_t index = static_cast<size_t>(y * width + x);
-                if (index < buffer.size())
-                {
-                    buffer[index].set_glyph(U' ');
-                }
+                terminal.clear_cell(glm::ivec2(x, y));
             }
         }
     }
-
-    glm::ivec2 max_corner = min_corner + max_size - glm::ivec2(1);
-    terminal.write_region(min_corner, max_corner);
-}
-
-void Browser::redraw()
-{
-    draw();
-    glm::ivec2 min_corner = get_location();
-    glm::ivec2 max_corner = min_corner + get_size() - glm::ivec2(1);
-    Terminal::instance().write_region(min_corner, max_corner);
 }
 
 void Browser::update(int key)
@@ -347,8 +394,6 @@ void Browser::update(int key)
         if (left)
         {
             focused->give_focus(left);
-            focused->redraw();
-            left->redraw();
         }
         return;
     }
@@ -359,8 +404,6 @@ void Browser::update(int key)
         if (right)
         {
             focused->give_focus(right);
-            focused->redraw();
-            right->redraw();
         }
         return;
     }
@@ -400,6 +443,9 @@ void Browser::give_focus(Browser* target)
 
     _is_focused = false;
     target->receive_focus();
+
+    draw();
+    target->draw();
 }
 
 void Browser::set_left(Browser* left)
@@ -415,6 +461,51 @@ void Browser::set_right(Browser* right)
 void Browser::set_player(Player* player)
 {
     _player = player;
+}
+
+void Browser::set_terminal(Terminal* terminal)
+{
+    _terminal = terminal;
+}
+
+void Browser::set_renderer(Renderer* renderer)
+{
+    _renderer = renderer;
+}
+
+void Browser::set_colours(
+    const glm::vec3& normal_fg,
+    const glm::vec3& selected_fg,
+    const glm::vec3& selected_bg,
+    const glm::vec3& inactive_fg,
+    const glm::vec3& inactive_bg)
+{
+    _normal_fg = normal_fg;
+    _selected_fg = selected_fg;
+    _selected_bg = selected_bg;
+    _inactive_fg = inactive_fg;
+    _inactive_bg = inactive_bg;
+}
+
+void Browser::update_canvas_sample()
+{
+    if (!_terminal)
+    {
+        return;
+    }
+
+    if (_size.x <= 1 || _size.y <= 1)
+    {
+        return;
+    }
+
+    glm::ivec2 sample_location(_location.x + 1, _location.y + 1);
+    glm::vec3 sample = _terminal->get_canvas_colour(sample_location);
+    if (sample != _canvas_sample)
+    {
+        _canvas_sample = sample;
+        draw();
+    }
 }
 
 const glm::ivec2& Browser::get_location() const
@@ -508,7 +599,6 @@ bool Browser::advance_to_next_song(std::string& out_path)
         {
             set_selected_index(index);
             out_path = _contents[index]->get_path().string();
-            redraw();
             return true;
         }
         index += 1;
@@ -557,8 +647,17 @@ void Browser::draw() const
         return;
     }
 
-    Renderer& renderer = Renderer::instance();
-    renderer.draw_box(_location, _size);
+    if (!_renderer)
+    {
+        return;
+    }
+
+    Renderer& renderer = *_renderer;
+    renderer.draw_box(
+        _location,
+        _size,
+        _normal_fg,
+        _terminal ? _terminal->get_canvas_colour(_location) : glm::vec3(0.0f));
 
     int inner_width = _size.x - 2;
     int inner_height = _size.y - 2;
@@ -613,11 +712,15 @@ void Browser::draw() const
         glm::ivec2 row_location(_location.x + 1, list_start_y + static_cast<int>(i));
         if (is_selected && _is_focused)
         {
-            renderer.draw_string_selected(line, row_location);
+            renderer.draw_string_coloured(line, row_location, _selected_fg, _selected_bg);
+        }
+        else if (is_selected)
+        {
+            renderer.draw_string_canvas_bg(line, row_location, glm::vec3(0.627f));
         }
         else
         {
-            renderer.draw_string(line, row_location);
+            renderer.draw_string_canvas_bg(line, row_location, _normal_fg);
         }
     }
 

@@ -5,6 +5,7 @@
 #include "config.h"
 
 class Player;
+class Renderer;
 
 #include <atomic>
 #include <mutex>
@@ -48,6 +49,8 @@ public:
         const std::string& artist,
         const std::string& album);
     void set_player(Player* player);
+    void set_terminal(Terminal* terminal);
+    void set_renderer(Renderer* renderer);
     void update_from_player(
         const app_config& config,
         int origin_x,
@@ -73,6 +76,8 @@ private:
     std::string _current_artist;
     std::string _current_album;
     Player* _player = nullptr;
+    Terminal* _terminal = nullptr;
+    Renderer* _renderer = nullptr;
 
 private:
     glm::ivec2 _location = glm::ivec2(0);

@@ -234,6 +234,11 @@ void MetadataPanel::set_size(const glm::ivec2& size)
     _size = size;
 }
 
+void MetadataPanel::set_renderer(Renderer* renderer)
+{
+    _renderer = renderer;
+}
+
 void MetadataPanel::draw(const app_config& config, const track_metadata& meta)
 {
     if (_size.x <= 0 || _size.y <= 0)
@@ -257,8 +262,18 @@ void MetadataPanel::draw(const app_config& config, const track_metadata& meta)
     int inner_width = std::max(0, _size.x - 2);
     int inner_height = std::max(0, _size.y - 2);
 
-    Renderer& renderer = Renderer::instance();
-    renderer.draw_box(_location, _size);
+    if (!_renderer)
+    {
+        return;
+    }
+
+    Renderer& renderer = *_renderer;
+    const Terminal& terminal = renderer.get_terminal();
+    renderer.draw_box(
+        _location,
+        _size,
+        glm::vec3(1.0f),
+        terminal.get_canvas_colour(_location));
 
     int max_lines = std::min(inner_height, static_cast<int>(lines.size()));
     for (int i = 0; i < max_lines; ++i)
@@ -275,8 +290,4 @@ void MetadataPanel::draw(const app_config& config, const track_metadata& meta)
         }
         renderer.draw_string(line, glm::ivec2(_location.x + 1, _location.y + 1 + i));
     }
-
-    glm::ivec2 min_corner = _location;
-    glm::ivec2 max_corner = _location + _size - glm::ivec2(1);
-    Terminal::instance().write_region(min_corner, max_corner);
 }

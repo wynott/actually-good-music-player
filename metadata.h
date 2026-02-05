@@ -4,7 +4,11 @@
 
 #include <glm/vec2.hpp>
 
+#include "terminal.h"
+
 #include "config.h"
+
+class Renderer;
 
 struct track_metadata
 {
@@ -31,10 +35,12 @@ public:
 
     void set_location(const glm::ivec2& location);
     void set_size(const glm::ivec2& size);
+    void set_renderer(Renderer* renderer);
 
     void draw(const app_config& config, const track_metadata& meta);
 
 private:
     glm::ivec2 _location = glm::ivec2(0);
     glm::ivec2 _size = glm::ivec2(0);
+    Renderer* _renderer = nullptr;
 };

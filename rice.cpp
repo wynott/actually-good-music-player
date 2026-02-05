@@ -1,6 +1,9 @@
 #include "rice.h"
 
+#include "rice.h"
+
 #include "draw.h"
+#include "spdlog/spdlog.h"
 #include "terminal.h"
 
 #include <algorithm>
@@ -11,25 +14,33 @@
 
 Rice::Rice() = default;
 
+void Rice::set_terminal(Terminal* terminal)
+{
+    _terminal = terminal;
+}
+
+void Rice::set_renderer(Renderer* renderer)
+{
+    _renderer = renderer;
+}
+
 void Rice::run(const app_config& config)
 {
+    if (!_terminal || !_renderer)
+    {
+        return;
+    }
+
     load_art();
     _art_colour = glm::vec3(
         static_cast<float>(config.rice_colour.r),
         static_cast<float>(config.rice_colour.g),
         static_cast<float>(config.rice_colour.b));
-    Renderer::instance().set_canvas(
+    _renderer->set_canvas(
         glm::vec3(config.rice_background_tl.r, config.rice_background_tl.g, config.rice_background_tl.b),
         glm::vec3(config.rice_background_tr.r, config.rice_background_tr.g, config.rice_background_tr.b),
         glm::vec3(config.rice_background_bl.r, config.rice_background_bl.g, config.rice_background_bl.b),
         glm::vec3(config.rice_background_br.r, config.rice_background_br.g, config.rice_background_br.b));
-    {
-        glm::ivec2 size = Terminal::instance().get_size();
-        if (size.x > 0 && size.y > 0)
-        {
-            Terminal::instance().write_region(glm::ivec2(0, 0), glm::ivec2(size.x - 1, size.y - 1));
-        }
-    }
 
     for (int frame = 0; frame < 4; ++frame)
     {
@@ -42,6 +53,8 @@ void Rice::run(const app_config& config)
 
 void Rice::draw_frame(int frame)
 {
+    spdlog::trace("Rice::draw_frame()");
+    
     ensure_buffer();
     clear_buffer();
 
@@ -129,7 +142,7 @@ void Rice::draw_frame(int frame)
         Terminal::Character& cell = _buffer[index];
         cell.set_glyph(glyph);
         cell.set_foreground_colour(_art_colour);
-        cell.set_background_colour(Terminal::instance().get_canvas_colour(glm::ivec2(x, y)));
+        cell.set_background_colour(_terminal->get_canvas_colour(glm::ivec2(x, y)));
     };
 
     int art_height = static_cast<int>(_lines.size());
@@ -158,11 +171,8 @@ void Rice::draw_frame(int frame)
         }
     }
 
-    blit();
-
-    glm::ivec2 min_corner = top_left;
-    glm::ivec2 max_corner = top_left + glm::ivec2(art_width, art_height) - glm::ivec2(1);
-    Terminal::instance().write_region(min_corner, max_corner);
+    Terminal& terminal = *_terminal;
+    terminal.set_canvas(_buffer);
 
     if (frame < 0)
     {
@@ -172,13 +182,13 @@ void Rice::draw_frame(int frame)
 
 glm::ivec2 Rice::get_center() const
 {
-    glm::ivec2 size = Terminal::instance().get_size();
+    glm::ivec2 size = _terminal->get_size();
     return glm::ivec2(size.x / 2, size.y / 2);
 }
 
 void Rice::ensure_buffer()
 {
-    glm::ivec2 size = Terminal::instance().get_size();
+    glm::ivec2 size = _terminal->get_size();
     if (size != _size)
     {
         _size = size;
@@ -193,17 +203,6 @@ void Rice::clear_buffer()
         cell.set_glyph(U' ');
         cell.set_foreground_colour(glm::vec3(0.0f));
         cell.set_background_colour(glm::vec3(0.0f));
-    }
-}
-
-void Rice::blit()
-{
-    Terminal& terminal = Terminal::instance();
-    std::vector<Terminal::Character>& canvas = terminal.mutate_canvas();
-    size_t count = std::min(canvas.size(), _buffer.size());
-    for (size_t i = 0; i < count; ++i)
-    {
-        canvas[i] = _buffer[i];
     }
 }
 
