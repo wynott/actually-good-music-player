@@ -1,6 +1,7 @@
 #pragma once
 
 #include "browser.h"
+#include "canvas.h"
 #include "player.h"
 #include "terminal.h"
 
@@ -12,6 +13,8 @@ public:
     void init();
     void run();
     void shutdown();
+
+    Canvas* get_canvas();
 
     ActuallyGoodMP(const ActuallyGoodMP&) = delete;
     ActuallyGoodMP& operator=(const ActuallyGoodMP&) = delete;
@@ -33,5 +36,6 @@ private:
     Player _player;
     Terminal _terminal;
     int _mp3_selected_subscription = 0;
+    Canvas _canvas;
 
 };

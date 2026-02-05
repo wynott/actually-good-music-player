@@ -3,12 +3,12 @@
 #include <algorithm>
 #include <chrono>
 #include <filesystem>
-#include <iostream>
 #include <string>
 #include <thread>
 
 #include "app.h"
 #include "album_art.h"
+#include "canvas.h"
 #include "draw.h"
 #include "event.h"
 #include "http.h"
@@ -303,6 +303,11 @@ void ActuallyGoodMP::run()
     }
 
     return;
+}
+
+Canvas* ActuallyGoodMP::get_canvas()
+{
+    return &_canvas;
 }
 
 void ActuallyGoodMP::shutdown()
