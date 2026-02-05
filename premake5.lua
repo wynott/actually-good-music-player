@@ -20,6 +20,8 @@ project "agmp"
         "app.h",
         "draw.cpp",
         "draw.h",
+        "event.cpp",
+        "event.h",
         "http.cpp",
         "http.h",
         "input.cpp",

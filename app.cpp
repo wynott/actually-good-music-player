@@ -9,6 +9,7 @@
 
 #include "album_art.h"
 #include "draw.h"
+#include "event.h"
 #include "http.h"
 #include "input.h"
 #include "metadata.h"
@@ -85,6 +86,20 @@ void ActuallyGoodMP::init()
     }
 
     Renderer::init(_terminal);
+
+    _mp3_selected_subscription = EventBus::instance().subscribe(
+        "browser.mp3_selected",
+        [this](const Event& event)
+        {
+            if (event.payload.empty())
+            {
+                return;
+            }
+
+            _player.set_current_track(event.payload);
+            _player.stop_playback();
+            _player.start_playback(_player.get_current_track());
+        });
 
     init_browsers();
 }
@@ -297,6 +312,12 @@ void ActuallyGoodMP::shutdown()
     _player.stop_playback();
 
     _terminal.shutdown();
+
+    if (_mp3_selected_subscription != 0)
+    {
+        EventBus::instance().unsubscribe(_mp3_selected_subscription);
+        _mp3_selected_subscription = 0;
+    }
     
     input_shutdown();
     http_cleanup();

@@ -5,10 +5,10 @@
 
 #include "browser.h"
 #include "draw.h"
+#include "event.h"
 #include "input.h"
 #include "player.h"
 #include "spdlog/spdlog.h"
-#include "terminal.h"
 
 Browser::Browser() = default;
 
@@ -138,15 +138,10 @@ void Mp3Item::on_select()
         return;
     }
 
-    //Player* player = owner->get_player();
-    //if (!player)
-    //{
-    //    return;
-    //}
-//
-    //player->set_current_track(get_path().string());
-    //player->stop_playback();
-    //player->start_playback(player->get_current_track());
+    EventBus::instance().publish(Event{
+        "browser.mp3_selected",
+        get_path().string()
+    });
 }
 
 void Mp3Item::scan_and_populate(

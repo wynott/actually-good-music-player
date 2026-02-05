@@ -23,5 +23,6 @@ private:
     app_config _config;
     Player _player;
     Terminal _terminal;
+    int _mp3_selected_subscription = 0;
 
 };
