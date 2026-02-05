@@ -11,12 +11,12 @@
 #include "terminal.h"
 
 #define STB_IMAGE_IMPLEMENTATION
-#include "vendor/stb_image.h"
+#include "vendor/stb/stb_image.h"
 
 #include "draw.h"
 #include "http.h"
 #include "player.h"
-#include "vendor/json.hpp"
+#include "vendor/json/single_include/nlohmann/json.hpp"
 
 
 static uint32_t read_be32(const uint8_t* data)
