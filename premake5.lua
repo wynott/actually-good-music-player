@@ -18,6 +18,8 @@ project "agmp"
         "browser.h",
         "app.cpp",
         "app.h",
+        "canvas.cpp",
+        "canvas.h",
         "draw.cpp",
         "draw.h",
         "event.cpp",

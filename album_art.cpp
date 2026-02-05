@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "album_art.h"
+#include "canvas.h"
 #include "spdlog/spdlog.h"
 #include "terminal.h"
 
@@ -489,11 +490,13 @@ bool AlbumArt::render_current(
     {
         clear_and_set_avg(glm::vec4(0.0f));
 
-        renderer->set_canvas(
+        Canvas canvas(renderer->get_terminal_size());
+        canvas.fill_gradient(
             glm::vec4(config.rice_background_tl.r, config.rice_background_tl.g, config.rice_background_tl.b, 1.0f),
             glm::vec4(config.rice_background_tr.r, config.rice_background_tr.g, config.rice_background_tr.b, 1.0f),
             glm::vec4(config.rice_background_bl.r, config.rice_background_bl.g, config.rice_background_bl.b, 1.0f),
             glm::vec4(config.rice_background_br.r, config.rice_background_br.g, config.rice_background_br.b, 1.0f));
+        renderer->set_canvas(canvas.get_buffer());
 
         return true;
     }
@@ -502,11 +505,13 @@ bool AlbumArt::render_current(
     {
         clear_and_set_avg(glm::vec4(0.0f));
 
-        renderer->set_canvas(
+        Canvas canvas(renderer->get_terminal_size());
+        canvas.fill_gradient(
             glm::vec4(config.rice_background_tl.r, config.rice_background_tl.g, config.rice_background_tl.b, 1.0f),
             glm::vec4(config.rice_background_tr.r, config.rice_background_tr.g, config.rice_background_tr.b, 1.0f),
             glm::vec4(config.rice_background_bl.r, config.rice_background_bl.g, config.rice_background_bl.b, 1.0f),
             glm::vec4(config.rice_background_br.r, config.rice_background_br.g, config.rice_background_br.b, 1.0f));
+        renderer->set_canvas(canvas.get_buffer());
 
         return true;
     }
@@ -517,7 +522,11 @@ bool AlbumArt::render_current(
     glm::vec4 avg_br(0.0f);
     average_colour(avg_tl, avg_tr, avg_bl, avg_br);
     clear_and_set_avg((avg_tl + avg_tr + avg_bl + avg_br) * 0.25f);
-    renderer->set_canvas(avg_tl, avg_tr, avg_bl, avg_br);
+    {
+        Canvas canvas(renderer->get_terminal_size());
+        canvas.fill_gradient(avg_tl, avg_tr, avg_bl, avg_br);
+        renderer->set_canvas(canvas.get_buffer());
+    }
 
     draw();
     return true;

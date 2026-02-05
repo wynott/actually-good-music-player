@@ -19,8 +19,6 @@ public:
     explicit Renderer(Terminal& terminal);
     void set_config(const app_config* config);
 
-    void set_canvas(const glm::vec4& colour);
-    void set_canvas(const glm::vec4& top_left, const glm::vec4& top_right, const glm::vec4& bottom_left, const glm::vec4& bottom_right);
     void set_canvas(const std::vector<Terminal::Character>& source);
 
     void draw_box(

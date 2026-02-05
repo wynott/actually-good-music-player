@@ -382,9 +382,6 @@ void Browser::give_focus(Browser* target)
 
     _is_focused = false;
     target->receive_focus();
-
-    //draw();
-    //target->draw();
 }
 
 void Browser::set_left(Browser* left)
