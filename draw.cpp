@@ -21,35 +21,35 @@ void Renderer::set_config(const app_config* config)
     _config = config;
 }
 
-static glm::vec3 to_vec3(const app_config::rgb_color& color)
+static glm::vec4 to_vec4(const app_config::rgb_color& color)
 {
-    return glm::vec3(color.r, color.g, color.b);
+    return glm::vec4(color.r, color.g, color.b, 1.0f);
 }
 
-static glm::vec3 default_box_colour(const app_config* config)
-{
-    if (config)
-    {
-        return to_vec3(config->ui_box_fg);
-    }
-    return glm::vec3(1.0f);
-}
-
-static glm::vec3 default_text_colour(const app_config* config)
+static glm::vec4 default_box_colour(const app_config* config)
 {
     if (config)
     {
-        return to_vec3(config->ui_text_fg);
+        return to_vec4(config->ui_box_fg);
     }
-    return glm::vec3(1.0f);
+    return glm::vec4(1.0f);
 }
 
-void Renderer::set_canvas(const glm::vec3& colour)
+static glm::vec4 default_text_colour(const app_config* config)
+{
+    if (config)
+    {
+        return to_vec4(config->ui_text_fg);
+    }
+    return glm::vec4(1.0f);
+}
+
+void Renderer::set_canvas(const glm::vec4& colour)
 {
     set_canvas(colour, colour, colour, colour);
 }
 
-void Renderer::set_canvas(const glm::vec3& top_left, const glm::vec3& top_right, const glm::vec3& bottom_left, const glm::vec3& bottom_right)
+void Renderer::set_canvas(const glm::vec4& top_left, const glm::vec4& top_right, const glm::vec4& bottom_left, const glm::vec4& bottom_right)
 {
     spdlog::trace("Renderer::set_canvas()");
 
@@ -59,7 +59,7 @@ void Renderer::set_canvas(const glm::vec3& top_left, const glm::vec3& top_right,
         return;
     }
 
-    auto lerp = [](const glm::vec3& a, const glm::vec3& b, float t)
+    auto lerp = [](const glm::vec4& a, const glm::vec4& b, float t)
     {
         return a + (b - a) * t;
     };
@@ -74,15 +74,16 @@ void Renderer::set_canvas(const glm::vec3& top_left, const glm::vec3& top_right,
         for (int x = 0; x < width; ++x)
         {
             float u = (width > 1) ? static_cast<float>(x) / static_cast<float>(width - 1) : 0.0f;
-            glm::vec3 top = lerp(top_left, top_right, u);
-            glm::vec3 bottom = lerp(bottom_left, bottom_right, u);
-            glm::vec3 colour_vec = lerp(top, bottom, v);
+            glm::vec4 top = lerp(top_left, top_right, u);
+            glm::vec4 bottom = lerp(bottom_left, bottom_right, u);
+            glm::vec4 colour_vec = lerp(top, bottom, v);
 
             size_t index = static_cast<size_t>(y * width + x);
             Terminal::Character& cell = canvas[index];
             cell.set_glyph(U' ');
-            cell.set_foreground_colour(colour_vec);
-            cell.set_background_colour(colour_vec);
+            glm::vec4 colour(colour_vec.x, colour_vec.y, colour_vec.z, 1.0f);
+            cell.set_glyph_colour(colour);
+            cell.set_background_colour(colour);
         }
     }
 
@@ -92,8 +93,8 @@ void Renderer::set_canvas(const glm::vec3& top_left, const glm::vec3& top_right,
 void Renderer::draw_box(
     const glm::ivec2& min_corner,
     const glm::ivec2& size,
-    const glm::vec3& foreground,
-    const glm::vec3& background)
+    const glm::vec4& foreground,
+    const glm::vec4& background)
 {
     spdlog::trace("Renderer::draw_box()");
 
@@ -228,7 +229,7 @@ void Renderer::draw_string(const std::string& text, const glm::ivec2& location)
             cell_location,
             static_cast<char32_t>(static_cast<unsigned char>(text[i])),
             default_text_colour(_config),
-            _terminal.get_canvas_colour(cell_location));
+            glm::vec4(0.0f));
     }
 }
 
@@ -268,16 +269,16 @@ void Renderer::draw_string_selected(const std::string& text, const glm::ivec2& l
         _terminal.set_glyph(
             cell_location,
             static_cast<char32_t>(static_cast<unsigned char>(text[i])),
-            _terminal.get_canvas_colour(cell_location),
-            default_text_colour(_config));
+            default_text_colour(_config),
+            glm::vec4(0.0f));
     }
 }
 
 void Renderer::draw_string_coloured(
     const std::string& text,
     const glm::ivec2& location,
-    const glm::vec3& foreground,
-    const glm::vec3& background)
+    const glm::vec4& foreground,
+    const glm::vec4& background)
 {
     spdlog::trace("Renderer::draw_string_coloured()");
 
@@ -320,7 +321,7 @@ void Renderer::draw_string_coloured(
 void Renderer::draw_string_canvas_bg(
     const std::string& text,
     const glm::ivec2& location,
-    const glm::vec3& foreground)
+    const glm::vec4& foreground)
 {
     spdlog::trace("Renderer::draw_string_canvas_bg()");
 
@@ -357,6 +358,6 @@ void Renderer::draw_string_canvas_bg(
             cell_location,
             static_cast<char32_t>(static_cast<unsigned char>(text[i])),
             foreground,
-            _terminal.get_canvas_colour(cell_location));
+            glm::vec4(0.0f));
     }
 }

@@ -41,7 +41,7 @@ public:
     bool load(const std::vector<unsigned char>& image_data);
     void draw() const;
 
-    void average_colour(glm::vec3& top_left, glm::vec3& top_right, glm::vec3& bottom_left, glm::vec3& bottom_right) const;
+    void average_colour(glm::vec4& top_left, glm::vec4& top_right, glm::vec4& bottom_left, glm::vec4& bottom_right) const;
 
     void set_track(
         const std::string& path,

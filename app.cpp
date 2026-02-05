@@ -19,6 +19,8 @@
 #include "terminal.h"
 #include "rice.h"
 
+#include <glm/vec4.hpp>
+
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/basic_file_sink.h>
 
@@ -141,10 +143,11 @@ void ActuallyGoodMP::run()
 
     analyzer.set_location(glm::ivec2(_config.spectrum_origin_x, _config.spectrum_origin_y));
     analyzer.set_size(glm::ivec2(_config.spectrum_width, _config.spectrum_height));
-    analyzer.set_bar_colour(glm::vec3(
+    analyzer.set_bar_colour(glm::vec4(
         static_cast<float>(_config.ui_text_fg.r),
         static_cast<float>(_config.ui_text_fg.g),
-        static_cast<float>(_config.ui_text_fg.b)));
+        static_cast<float>(_config.ui_text_fg.b),
+        1.0f));
 
     _player.set_spectrum_analyzer(&analyzer);
 
@@ -242,10 +245,6 @@ void ActuallyGoodMP::run()
         }
 
         album_art.update_from_player(_config, 0, 0);
-
-        _artist_browser.update_canvas_sample();
-        _album_browser.update_canvas_sample();
-        _song_browser.update_canvas_sample();
 
         if (!_config.safe_mode)
         {

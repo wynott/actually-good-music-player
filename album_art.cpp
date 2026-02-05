@@ -493,48 +493,48 @@ bool AlbumArt::render_current(
     set_location(glm::ivec2(origin_x, top_left_y));
     set_size(glm::ivec2(out_w, out_h));
 
-    auto clear_and_set_avg = [&](const glm::vec3& colour)
+    auto clear_and_set_avg = [&](const glm::vec4& colour)
     {
         if (out_avg_color)
         {
-            out_avg_color->r = static_cast<int>(colour.r + 0.5f);
-            out_avg_color->g = static_cast<int>(colour.g + 0.5f);
-            out_avg_color->b = static_cast<int>(colour.b + 0.5f);
+            out_avg_color->r = colour.r;
+            out_avg_color->g = colour.g;
+            out_avg_color->b = colour.b;
         }
     };
 
     if (!snapshot.ready || !snapshot.has_art)
     {
-        clear_and_set_avg(glm::vec3(0.0f));
+        clear_and_set_avg(glm::vec4(0.0f));
         if (_renderer)
         {
             _renderer->set_canvas(
-                glm::vec3(config.rice_background_tl.r, config.rice_background_tl.g, config.rice_background_tl.b),
-                glm::vec3(config.rice_background_tr.r, config.rice_background_tr.g, config.rice_background_tr.b),
-                glm::vec3(config.rice_background_bl.r, config.rice_background_bl.g, config.rice_background_bl.b),
-                glm::vec3(config.rice_background_br.r, config.rice_background_br.g, config.rice_background_br.b));
+                glm::vec4(config.rice_background_tl.r, config.rice_background_tl.g, config.rice_background_tl.b, 1.0f),
+                glm::vec4(config.rice_background_tr.r, config.rice_background_tr.g, config.rice_background_tr.b, 1.0f),
+                glm::vec4(config.rice_background_bl.r, config.rice_background_bl.g, config.rice_background_bl.b, 1.0f),
+                glm::vec4(config.rice_background_br.r, config.rice_background_br.g, config.rice_background_br.b, 1.0f));
         }
         return true;
     }
 
     if (!load(snapshot.data))
     {
-        clear_and_set_avg(glm::vec3(0.0f));
+        clear_and_set_avg(glm::vec4(0.0f));
         if (_renderer)
         {
             _renderer->set_canvas(
-                glm::vec3(config.rice_background_tl.r, config.rice_background_tl.g, config.rice_background_tl.b),
-                glm::vec3(config.rice_background_tr.r, config.rice_background_tr.g, config.rice_background_tr.b),
-                glm::vec3(config.rice_background_bl.r, config.rice_background_bl.g, config.rice_background_bl.b),
-                glm::vec3(config.rice_background_br.r, config.rice_background_br.g, config.rice_background_br.b));
+                glm::vec4(config.rice_background_tl.r, config.rice_background_tl.g, config.rice_background_tl.b, 1.0f),
+                glm::vec4(config.rice_background_tr.r, config.rice_background_tr.g, config.rice_background_tr.b, 1.0f),
+                glm::vec4(config.rice_background_bl.r, config.rice_background_bl.g, config.rice_background_bl.b, 1.0f),
+                glm::vec4(config.rice_background_br.r, config.rice_background_br.g, config.rice_background_br.b, 1.0f));
         }
         return true;
     }
 
-    glm::vec3 avg_tl(0.0f);
-    glm::vec3 avg_tr(0.0f);
-    glm::vec3 avg_bl(0.0f);
-    glm::vec3 avg_br(0.0f);
+    glm::vec4 avg_tl(0.0f);
+    glm::vec4 avg_tr(0.0f);
+    glm::vec4 avg_bl(0.0f);
+    glm::vec4 avg_br(0.0f);
     average_colour(avg_tl, avg_tr, avg_bl, avg_br);
     clear_and_set_avg((avg_tl + avg_tr + avg_bl + avg_br) * 0.25f);
     if (_renderer)
@@ -611,8 +611,9 @@ bool AlbumArt::load_image_data(const std::vector<unsigned char>& image_data)
             size_t dst_index = static_cast<size_t>(y * out_w + x);
             Terminal::Character& cell = _pixels[dst_index];
             cell.set_glyph(U'█');
-            cell.set_foreground_colour(glm::vec3(r * inv, g * inv, b * inv));
-            cell.set_background_colour(glm::vec3(r * inv, g * inv, b * inv));
+            glm::vec4 colour(r * inv, g * inv, b * inv, 1.0f);
+            cell.set_glyph_colour(colour);
+            cell.set_background_colour(colour);
         }
     }
 
@@ -667,18 +668,18 @@ void AlbumArt::draw() const
             terminal.set_glyph(
                 glm::ivec2(target_x, target_y),
                 src.get_glyph(),
-                src.get_foreground_colour(),
+                src.get_glyph_colour(),
                 src.get_background_colour());
         }
     }
 }
 
-void AlbumArt::average_colour(glm::vec3& top_left, glm::vec3& top_right, glm::vec3& bottom_left, glm::vec3& bottom_right) const
+void AlbumArt::average_colour(glm::vec4& top_left, glm::vec4& top_right, glm::vec4& bottom_left, glm::vec4& bottom_right) const
 {
-    top_left = glm::vec3(0.0f);
-    top_right = glm::vec3(0.0f);
-    bottom_left = glm::vec3(0.0f);
-    bottom_right = glm::vec3(0.0f);
+    top_left = glm::vec4(0.0f);
+    top_right = glm::vec4(0.0f);
+    bottom_left = glm::vec4(0.0f);
+    bottom_right = glm::vec4(0.0f);
 
     if (_pixels.empty() || _size.x <= 0 || _size.y <= 0)
     {
@@ -716,7 +717,7 @@ void AlbumArt::average_colour(glm::vec3& top_left, glm::vec3& top_right, glm::ve
                 continue;
             }
 
-            glm::vec3 colour = _pixels[index].get_foreground_colour();
+            glm::vec4 colour = _pixels[index].get_glyph_colour();
             bool left = x < mid_x;
             bool top = y < mid_y;
 
@@ -753,30 +754,34 @@ void AlbumArt::average_colour(glm::vec3& top_left, glm::vec3& top_right, glm::ve
 
     if (count_tl > 0.0)
     {
-        top_left = glm::vec3(
+        top_left = glm::vec4(
             static_cast<float>(sum_tl_r / count_tl),
             static_cast<float>(sum_tl_g / count_tl),
-            static_cast<float>(sum_tl_b / count_tl));
+            static_cast<float>(sum_tl_b / count_tl),
+            1.0f);
     }
     if (count_tr > 0.0)
     {
-        top_right = glm::vec3(
+        top_right = glm::vec4(
             static_cast<float>(sum_tr_r / count_tr),
             static_cast<float>(sum_tr_g / count_tr),
-            static_cast<float>(sum_tr_b / count_tr));
+            static_cast<float>(sum_tr_b / count_tr),
+            1.0f);
     }
     if (count_bl > 0.0)
     {
-        bottom_left = glm::vec3(
+        bottom_left = glm::vec4(
             static_cast<float>(sum_bl_r / count_bl),
             static_cast<float>(sum_bl_g / count_bl),
-            static_cast<float>(sum_bl_b / count_bl));
+            static_cast<float>(sum_bl_b / count_bl),
+            1.0f);
     }
     if (count_br > 0.0)
     {
-        bottom_right = glm::vec3(
+        bottom_right = glm::vec4(
             static_cast<float>(sum_br_r / count_br),
             static_cast<float>(sum_br_g / count_br),
-            static_cast<float>(sum_br_b / count_br));
+            static_cast<float>(sum_br_b / count_br),
+            1.0f);
     }
 }

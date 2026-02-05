@@ -5,8 +5,8 @@
 #include <string>
 #include <vector>
 
-#include <glm/vec3.hpp>
 #include <glm/vec2.hpp>
+#include <glm/vec4.hpp>
 
 struct TerminalSize
 {
@@ -23,20 +23,20 @@ public:
     {
     public:
         Character();
-        Character(const std::string& value, const glm::vec3& foreground, const glm::vec3& background);
+        Character(const std::string& value, const glm::vec4& foreground, const glm::vec4& background);
 
         void set_glyph(char32_t glyph);
         char32_t get_glyph() const;
 
-        void set_foreground_colour(const glm::vec3& colour);
-        void set_background_colour(const glm::vec3& colour);
-        const glm::vec3& get_foreground_colour() const;
-        const glm::vec3& get_background_colour() const;
+        void set_glyph_colour(const glm::vec4& colour);
+        void set_background_colour(const glm::vec4& colour);
+        const glm::vec4& get_glyph_colour() const;
+        const glm::vec4& get_background_colour() const;
 
     private:
         char32_t _glyph = U' ';
-        glm::vec3 _foreground_colour = glm::vec3(0);
-        glm::vec3 _background_colour = glm::vec3(0);
+        glm::vec4 _glyph_colour = glm::vec4(0.0f);
+        glm::vec4 _background_colour = glm::vec4(0.0f);
     };
 
     class BackingStore
@@ -63,11 +63,11 @@ public:
     glm::ivec2 get_size() const;
     glm::ivec2 get_location(std::size_t buffer_index) const;
     std::size_t get_index(const glm::ivec2& location) const;
-    glm::vec3 get_canvas_colour(const glm::ivec2& location) const;
+    glm::vec4 get_canvas_sample(const glm::ivec2& location) const;
     bool is_dirty(const glm::ivec2& location) const;
 
     void set_glyph(char32_t glyph, const glm::ivec2& location);
-    void set_glyph(const glm::ivec2& location, char32_t glyph, const glm::vec3& foreground, const glm::vec3& background);
+    void set_glyph(const glm::ivec2& location, char32_t glyph, const glm::vec4& foreground, const glm::vec4& background);
     void clear_cell(const glm::ivec2& location);
     void set_canvas(const std::vector<Character>& source);
 
@@ -82,6 +82,6 @@ private:
 private:
     glm::ivec2 _size = glm::ivec2(0);
     BackingStore _store;
-    glm::vec3 _current_foreground_colour = glm::vec3(-1.0f);
-    glm::vec3 _current_background_colour = glm::vec3(-1.0f);
+    glm::vec4 _current_glyph_colour = glm::vec4(-1.0f);
+    glm::vec4 _current_background_colour = glm::vec4(-1.0f);
 };

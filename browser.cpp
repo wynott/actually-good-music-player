@@ -68,18 +68,19 @@ void Browser::init_all(
     song.set_player(&player);
     player.set_song_browser(&song);
 
-    auto to_vec3 = [](const app_config::rgb_color& color)
+    auto to_vec4 = [](const app_config::rgb_color& color)
     {
-        return glm::vec3(
+        return glm::vec4(
             static_cast<float>(color.r),
             static_cast<float>(color.g),
-            static_cast<float>(color.b));
+            static_cast<float>(color.b),
+            1.0f);
     };
-    glm::vec3 normal_fg = to_vec3(config.browser_normal_fg);
-    glm::vec3 selected_fg = to_vec3(config.browser_selected_fg);
-    glm::vec3 selected_bg = to_vec3(config.browser_selected_bg);
-    glm::vec3 inactive_fg = to_vec3(config.browser_inactive_fg);
-    glm::vec3 inactive_bg = to_vec3(config.browser_inactive_bg);
+    glm::vec4 normal_fg = to_vec4(config.browser_normal_fg);
+    glm::vec4 selected_fg = to_vec4(config.browser_selected_fg);
+    glm::vec4 selected_bg = to_vec4(config.browser_selected_bg);
+    glm::vec4 inactive_fg = to_vec4(config.browser_inactive_fg);
+    glm::vec4 inactive_bg = to_vec4(config.browser_inactive_bg);
     artist.set_colours(normal_fg, selected_fg, selected_bg, inactive_fg, inactive_bg);
     album.set_colours(normal_fg, selected_fg, selected_bg, inactive_fg, inactive_bg);
     song.set_colours(normal_fg, selected_fg, selected_bg, inactive_fg, inactive_bg);
@@ -474,38 +475,17 @@ void Browser::set_renderer(Renderer* renderer)
 }
 
 void Browser::set_colours(
-    const glm::vec3& normal_fg,
-    const glm::vec3& selected_fg,
-    const glm::vec3& selected_bg,
-    const glm::vec3& inactive_fg,
-    const glm::vec3& inactive_bg)
+    const glm::vec4& normal_fg,
+    const glm::vec4& selected_fg,
+    const glm::vec4& selected_bg,
+    const glm::vec4& inactive_fg,
+    const glm::vec4& inactive_bg)
 {
     _normal_fg = normal_fg;
     _selected_fg = selected_fg;
     _selected_bg = selected_bg;
     _inactive_fg = inactive_fg;
     _inactive_bg = inactive_bg;
-}
-
-void Browser::update_canvas_sample()
-{
-    if (!_terminal)
-    {
-        return;
-    }
-
-    if (_size.x <= 1 || _size.y <= 1)
-    {
-        return;
-    }
-
-    glm::ivec2 sample_location(_location.x + 1, _location.y + 1);
-    glm::vec3 sample = _terminal->get_canvas_colour(sample_location);
-    if (sample != _canvas_sample)
-    {
-        _canvas_sample = sample;
-        draw();
-    }
 }
 
 const glm::ivec2& Browser::get_location() const
@@ -657,7 +637,7 @@ void Browser::draw() const
         _location,
         _size,
         _normal_fg,
-        _terminal ? _terminal->get_canvas_colour(_location) : glm::vec3(0.0f));
+        glm::vec4(0.0f));
 
     int inner_width = _size.x - 2;
     int inner_height = _size.y - 2;
@@ -716,7 +696,7 @@ void Browser::draw() const
         }
         else if (is_selected)
         {
-            renderer.draw_string_canvas_bg(line, row_location, glm::vec3(0.627f));
+            renderer.draw_string_canvas_bg(line, row_location, glm::vec4(0.627f, 0.627f, 0.627f, 1.0f));
         }
         else
         {

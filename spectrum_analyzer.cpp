@@ -24,7 +24,7 @@ void SpectrumAnalyzer::set_size(const glm::ivec2& size)
     _size = size;
 }
 
-void SpectrumAnalyzer::set_bar_colour(const glm::vec3& colour)
+void SpectrumAnalyzer::set_bar_colour(const glm::vec4& colour)
 {
     _bar_colour = colour;
 }
@@ -286,7 +286,7 @@ void SpectrumAnalyzer::draw()
                 cell_location,
                 U' ',
                 _bar_colour,
-                terminal.get_canvas_colour(cell_location));
+                glm::vec4(0.0f));
         }
     }
 
@@ -323,22 +323,24 @@ void SpectrumAnalyzer::draw()
         }
 
         float t = (width > 1) ? static_cast<float>(x) / static_cast<float>(width - 1) : 0.0f;
-        glm::vec3 band_colour = _bar_colour;
+        glm::vec4 band_colour = _bar_colour;
         if (t < 0.5f)
         {
             float u = t / 0.5f;
-            band_colour = glm::vec3(
+            band_colour = glm::vec4(
                 0.251f + (1.0f - 0.251f) * u,
                 0.502f + (1.0f - 0.502f) * u,
+                1.0f,
                 1.0f);
         }
         else
         {
             float u = (t - 0.5f) / 0.5f;
-            band_colour = glm::vec3(
+            band_colour = glm::vec4(
                 1.0f,
                 1.0f - (1.0f - 0.376f) * u,
-                1.0f - (1.0f - 0.251f) * u);
+                1.0f - (1.0f - 0.251f) * u,
+                1.0f);
         }
 
         int draw_x = min_x + x;
@@ -350,7 +352,7 @@ void SpectrumAnalyzer::draw()
                 cell_location,
                 U'█',
                 band_colour,
-                terminal.get_canvas_colour(cell_location));
+                glm::vec4(0.0f));
         }
     }
     

@@ -2,7 +2,7 @@
 
 #include <algorithm>
 #include <glm/vec2.hpp>
-#include <glm/vec3.hpp>
+#include <glm/vec4.hpp>
 #include <cstring>
 #include <iostream>
 #include <string>
@@ -99,15 +99,15 @@ static bool decode_utf8_first(const std::string& value, char32_t& out)
     return false;
 }
 
-static bool vec3_equal(const glm::vec3& a, const glm::vec3& b)
+static bool vec4_equal(const glm::vec4& a, const glm::vec4& b)
 {
-    return a.x == b.x && a.y == b.y && a.z == b.z;
+    return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
 }
 
-static glm::vec3 normalize_colour(const glm::vec3& colour)
+static glm::vec4 normalize_colour(const glm::vec4& colour)
 {
     bool clamped = false;
-    glm::vec3 result = colour;
+    glm::vec4 result = colour;
     if (result.x < 0.0f)
     {
         result.x = 0.0f;
@@ -121,6 +121,11 @@ static glm::vec3 normalize_colour(const glm::vec3& colour)
     if (result.z < 0.0f)
     {
         result.z = 0.0f;
+        clamped = true;
+    }
+    if (result.w < 0.0f)
+    {
+        result.w = 0.0f;
         clamped = true;
     }
     if (result.x > 1.0f)
@@ -138,6 +143,11 @@ static glm::vec3 normalize_colour(const glm::vec3& colour)
         result.z = 1.0f;
         clamped = true;
     }
+    if (result.w > 1.0f)
+    {
+        result.w = 1.0f;
+        clamped = true;
+    }
 
     if (clamped)
     {
@@ -149,16 +159,16 @@ static glm::vec3 normalize_colour(const glm::vec3& colour)
 
 static bool is_empty_glyph(const Terminal::Character& value)
 {
-    static const glm::vec3 kDefaultColour(0.0f);
+    static const glm::vec4 kDefaultColour(0.0f);
     if (value.get_glyph() != U' ')
     {
         return false;
     }
-    if (!vec3_equal(value.get_foreground_colour(), kDefaultColour))
+    if (value.get_glyph_colour() != kDefaultColour)
     {
         return false;
     }
-    if (!vec3_equal(value.get_background_colour(), kDefaultColour))
+    if (!vec4_equal(value.get_background_colour(), kDefaultColour))
     {
         return false;
     }
@@ -193,7 +203,7 @@ static std::string encode_utf8_char(char32_t value)
     return output;
 }
 
-static std::string to_ansi_channel(const glm::vec3& colour, bool background)
+static std::string to_ansi_channel(const glm::vec4& colour, bool background)
 {
     auto clamp_unit = [](float value)
     {
@@ -265,13 +275,13 @@ void Terminal::BackingStore::resize(int width, int height)
 
 Terminal::Character::Character()
     : _glyph(U' '),
-      _foreground_colour(glm::vec3(0))
+      _glyph_colour(glm::vec4(0.0f))
 {
 }
 
-Terminal::Character::Character(const std::string& value, const glm::vec3& foreground, const glm::vec3& background)
+Terminal::Character::Character(const std::string& value, const glm::vec4& foreground, const glm::vec4& background)
     : _glyph(U' '),
-      _foreground_colour(foreground),
+      _glyph_colour(foreground),
       _background_colour(background)
 {
     char32_t decoded = U' ';
@@ -291,22 +301,22 @@ char32_t Terminal::Character::get_glyph() const
     return _glyph;
 }
 
-void Terminal::Character::set_foreground_colour(const glm::vec3& colour)
+void Terminal::Character::set_glyph_colour(const glm::vec4& colour)
 {
-    _foreground_colour = colour;
+    _glyph_colour = colour;
 }
 
-void Terminal::Character::set_background_colour(const glm::vec3& colour)
+void Terminal::Character::set_background_colour(const glm::vec4& colour)
 {
     _background_colour = colour;
 }
 
-const glm::vec3& Terminal::Character::get_foreground_colour() const
+const glm::vec4& Terminal::Character::get_glyph_colour() const
 {
-    return _foreground_colour;
+    return _glyph_colour;
 }
 
-const glm::vec3& Terminal::Character::get_background_colour() const
+const glm::vec4& Terminal::Character::get_background_colour() const
 {
     return _background_colour;
 }
@@ -318,8 +328,8 @@ void Terminal::on_terminal_resize()
     {
         _size = size;
         _store.resize(_size.x, _size.y);
-        _current_foreground_colour = glm::vec3(-1.0f);
-        _current_background_colour = glm::vec3(-1.0f);
+        _current_glyph_colour = glm::vec4(-1.0f);
+        _current_background_colour = glm::vec4(-1.0f);
     }
 }
 
@@ -351,17 +361,17 @@ size_t Terminal::get_index(const glm::ivec2& location) const
     return static_cast<size_t>(location.y * _size.x + location.x);
 }
 
-glm::vec3 Terminal::get_canvas_colour(const glm::ivec2& location) const
+glm::vec4 Terminal::get_canvas_sample(const glm::ivec2& location) const
 {
     if (location.x < 0 || location.y < 0 || location.x >= _size.x || location.y >= _size.y)
     {
-        return glm::vec3(0.0f);
+        return glm::vec4(0.0f);
     }
 
     size_t index = get_index(location);
     if (index >= _store.canvas.size())
     {
-        return glm::vec3(0.0f);
+        return glm::vec4(0.0f);
     }
 
     const Character& cell = _store.canvas[index];
@@ -385,7 +395,7 @@ void Terminal::set_glyph(char32_t glyph, const glm::ivec2& location)
     _store.dirty[index] = true;
 }
 
-void Terminal::set_glyph(const glm::ivec2& location, char32_t glyph, const glm::vec3& foreground, const glm::vec3& background)
+void Terminal::set_glyph(const glm::ivec2& location, char32_t glyph, const glm::vec4& foreground, const glm::vec4& background)
 {
     if (location.x < 0 || location.y < 0 || location.x >= _size.x || location.y >= _size.y)
     {
@@ -400,9 +410,9 @@ void Terminal::set_glyph(const glm::ivec2& location, char32_t glyph, const glm::
 
     Terminal::Character& cell = _store.buffer[index];
     cell.set_glyph(glyph);
-    glm::vec3 fg = normalize_colour(foreground);
-    glm::vec3 bg = normalize_colour(background);
-    cell.set_foreground_colour(fg);
+    glm::vec4 fg = normalize_colour(foreground);
+    glm::vec4 bg = normalize_colour(background);
+    cell.set_glyph_colour(fg);
     cell.set_background_colour(bg);
     _store.dirty[index] = true;
 }
@@ -422,8 +432,8 @@ void Terminal::clear_cell(const glm::ivec2& location)
 
     Terminal::Character& cell = _store.buffer[index];
     cell.set_glyph(U' ');
-    cell.set_foreground_colour(glm::vec3(0.0f));
-    cell.set_background_colour(glm::vec3(0.0f));
+    cell.set_glyph_colour(glm::vec4(0.0f));
+    cell.set_background_colour(glm::vec4(0.0f));
     _store.dirty[index] = true;
 }
 
@@ -593,19 +603,23 @@ void Terminal::write_string_to_terminal(const glm::ivec2& location, std::size_t 
         {
             desired = &canvas_cell;
         }
-        glm::vec3 desired_foreground = desired->get_foreground_colour();
-        glm::vec3 desired_background = desired->get_background_colour();
+        glm::vec4 desired_foreground = desired->get_glyph_colour();
+        glm::vec4 desired_background = desired->get_background_colour();
+        if (desired_background.w == 0.0f)
+        {
+            desired_background = canvas_cell.get_background_colour();
+        }
 
         glm::ivec2 cell_location = get_location(index);
         sequence += "\x1b[" + std::to_string(cell_location.y + 1) + ";" + std::to_string(cell_location.x + 1) + "H";
 
-        if (!vec3_equal(desired_foreground, _current_foreground_colour))
+        if (!vec4_equal(desired_foreground, _current_glyph_colour))
         {
             sequence += to_ansi_channel(desired_foreground, false);
-            _current_foreground_colour = desired_foreground;
+            _current_glyph_colour = desired_foreground;
         }
 
-        if (!vec3_equal(desired_background, _current_background_colour))
+        if (!vec4_equal(desired_background, _current_background_colour))
         {
             sequence += to_ansi_channel(desired_background, true);
             _current_background_colour = desired_background;

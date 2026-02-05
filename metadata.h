@@ -6,6 +6,8 @@
 
 #include "terminal.h"
 
+#include <glm/vec4.hpp>
+
 #include "config.h"
 
 class Renderer;

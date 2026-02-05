@@ -1,6 +1,7 @@
 #pragma once
 
 #include <glm/vec2.hpp>
+#include <glm/vec4.hpp>
 
 #include <mutex>
 #include <vector>
@@ -16,7 +17,7 @@ public:
 
     void set_location(const glm::ivec2& location);
     void set_size(const glm::ivec2& size);
-    void set_bar_colour(const glm::vec3& colour);
+    void set_bar_colour(const glm::vec4& colour);
     void set_terminal(Terminal* terminal);
     void set_renderer(Renderer* renderer);
 
@@ -30,7 +31,7 @@ private:
 
     glm::ivec2 _location = glm::ivec2(0);
     glm::ivec2 _size = glm::ivec2(0);
-    glm::vec3 _bar_colour = glm::vec3(0.941f);
+    glm::vec4 _bar_colour = glm::vec4(0.941f, 0.941f, 0.941f, 1.0f);
     Terminal* _terminal = nullptr;
     Renderer* _renderer = nullptr;
 

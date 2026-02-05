@@ -32,15 +32,16 @@ void Rice::run(const app_config& config)
     }
 
     load_art();
-    _art_colour = glm::vec3(
+    _art_colour = glm::vec4(
         static_cast<float>(config.rice_colour.r),
         static_cast<float>(config.rice_colour.g),
-        static_cast<float>(config.rice_colour.b));
+        static_cast<float>(config.rice_colour.b),
+        1.0f);
     _renderer->set_canvas(
-        glm::vec3(config.rice_background_tl.r, config.rice_background_tl.g, config.rice_background_tl.b),
-        glm::vec3(config.rice_background_tr.r, config.rice_background_tr.g, config.rice_background_tr.b),
-        glm::vec3(config.rice_background_bl.r, config.rice_background_bl.g, config.rice_background_bl.b),
-        glm::vec3(config.rice_background_br.r, config.rice_background_br.g, config.rice_background_br.b));
+        glm::vec4(config.rice_background_tl.r, config.rice_background_tl.g, config.rice_background_tl.b, 1.0f),
+        glm::vec4(config.rice_background_tr.r, config.rice_background_tr.g, config.rice_background_tr.b, 1.0f),
+        glm::vec4(config.rice_background_bl.r, config.rice_background_bl.g, config.rice_background_bl.b, 1.0f),
+        glm::vec4(config.rice_background_br.r, config.rice_background_br.g, config.rice_background_br.b, 1.0f));
 
     for (int frame = 0; frame < 4; ++frame)
     {
@@ -141,8 +142,8 @@ void Rice::draw_frame(int frame)
         }
         Terminal::Character& cell = _buffer[index];
         cell.set_glyph(glyph);
-        cell.set_foreground_colour(_art_colour);
-        cell.set_background_colour(_terminal->get_canvas_colour(glm::ivec2(x, y)));
+        cell.set_glyph_colour(_art_colour);
+        cell.set_background_colour(glm::vec4(0.0f));
     };
 
     int art_height = static_cast<int>(_lines.size());
@@ -201,8 +202,8 @@ void Rice::clear_buffer()
     for (Terminal::Character& cell : _buffer)
     {
         cell.set_glyph(U' ');
-        cell.set_foreground_colour(glm::vec3(0.0f));
-        cell.set_background_colour(glm::vec3(0.0f));
+        cell.set_glyph_colour(glm::vec4(0.0f));
+        cell.set_background_colour(glm::vec4(0.0f));
     }
 }
 

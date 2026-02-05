@@ -8,6 +8,8 @@
 #include "terminal.h"
 #include "config.h"
 
+#include <glm/vec4.hpp>
+
 class Renderer;
 
 class Rice
@@ -28,7 +30,7 @@ private:
     std::vector<Terminal::Character> _buffer;
     glm::ivec2 _size = glm::ivec2(0);
     std::vector<std::string> _lines;
-    glm::vec3 _art_colour = glm::vec3(1.0f);
+    glm::vec4 _art_colour = glm::vec4(1.0f);
     Terminal* _terminal = nullptr;
     Renderer* _renderer = nullptr;
 };

@@ -268,12 +268,11 @@ void MetadataPanel::draw(const app_config& config, const track_metadata& meta)
     }
 
     Renderer& renderer = *_renderer;
-    const Terminal& terminal = renderer.get_terminal();
     renderer.draw_box(
         _location,
         _size,
-        glm::vec3(1.0f),
-        terminal.get_canvas_colour(_location));
+        glm::vec4(1.0f),
+        glm::vec4(0.0f));
 
     int max_lines = std::min(inner_height, static_cast<int>(lines.size()));
     for (int i = 0; i < max_lines; ++i)
