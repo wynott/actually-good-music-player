@@ -40,7 +40,7 @@ public:
         int width = 0;
         int height = 0;
         std::vector<Character> buffer;
-        std::vector<Character> canvas;
+        std::vector<Character>* canvas = nullptr;
         std::vector<bool> dirty;
     };
 

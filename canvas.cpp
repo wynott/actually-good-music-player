@@ -26,6 +26,11 @@ const std::vector<Terminal::Character>& Canvas::get_buffer() const
     return _buffer;
 }
 
+std::vector<Terminal::Character>* Canvas::mutate_buffer()
+{
+    return &_buffer;
+}
+
 void Canvas::fill(const glm::vec4& colour)
 {
     if (_size.x <= 0 || _size.y <= 0)

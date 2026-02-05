@@ -1,5 +1,6 @@
 #include "rice.h"
 
+#include "app.h"
 #include "rice.h"
 
 #include "canvas.h"
@@ -26,13 +27,13 @@ void Rice::run(const app_config& config)
         1.0f);
     if (auto renderer = Renderer::get())
     {
-        Canvas canvas(renderer->get_terminal_size());
-        canvas.fill_gradient(
+        Canvas* canvas = ActuallyGoodMP::instance().mutate_canvas();
+        canvas->fill_gradient(
             glm::vec4(config.rice_background_tl.r, config.rice_background_tl.g, config.rice_background_tl.b, 1.0f),
             glm::vec4(config.rice_background_tr.r, config.rice_background_tr.g, config.rice_background_tr.b, 1.0f),
             glm::vec4(config.rice_background_bl.r, config.rice_background_bl.g, config.rice_background_bl.b, 1.0f),
             glm::vec4(config.rice_background_br.r, config.rice_background_br.g, config.rice_background_br.b, 1.0f));
-        renderer->set_canvas(canvas.get_buffer());
+        renderer->set_canvas(canvas->get_buffer());
     }
 
     for (int frame = 0; frame < 4; ++frame)

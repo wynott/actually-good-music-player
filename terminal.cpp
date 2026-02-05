@@ -1,4 +1,5 @@
 #include "terminal.h"
+#include "app.h"
 #include "spdlog/spdlog.h"
 
 #include <algorithm>
@@ -61,6 +62,8 @@ void Terminal::init()
         }
     }
 #endif
+
+    _store.canvas = ActuallyGoodMP::instance().mutate_canvas()->mutate_buffer();
 }
 
 static bool decode_utf8_first(const std::string& value, char32_t& out)

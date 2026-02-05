@@ -16,6 +16,7 @@ public:
     void resize(const glm::ivec2& size);
     const glm::ivec2& get_size() const;
     const std::vector<Terminal::Character>& get_buffer() const;
+    std::vector<Terminal::Character>* mutate_buffer();
 
     void fill(const glm::vec4& colour);
     void fill_gradient(
