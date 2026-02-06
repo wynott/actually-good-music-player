@@ -5,6 +5,7 @@
 #include "spdlog/spdlog.h"
 
 #include <algorithm>
+#include <cstdint>
 #include <glm/vec2.hpp>
 #include <glm/vec4.hpp>
 #include <cstring>
@@ -227,34 +228,24 @@ static std::string encode_utf8_char(char32_t value)
     return output;
 }
 
-static std::string to_ansi_channel(const glm::vec4& colour, bool background)
-{
-    auto clamp_unit = [](float value)
-    {
-        if (value < 0.0f)
-        {
-            value = 0.0f;
-        }
-        if (value > 1.0f)
-        {
-            value = 1.0f;
-        }
-        return static_cast<int>(value * 255.0f + 0.5f);
-    };
 
-    int r = clamp_unit(colour.x);
-    int g = clamp_unit(colour.y);
-    int b = clamp_unit(colour.z);
+static bool u8vec3_equal(const glm::u8vec3& a, const glm::u8vec3& b)
+{
+    return a.r == b.r && a.g == b.g && a.b == b.b;
+}
+
+static std::string to_ansi_channel(const glm::u8vec3& colour, bool background)
+{
     std::string sequence;
     sequence.reserve(24);
     sequence += "\x1b[";
     sequence += background ? "48" : "38";
     sequence += ";2;";
-    sequence += std::to_string(r);
+    sequence += std::to_string(colour.r);
     sequence += ";";
-    sequence += std::to_string(g);
+    sequence += std::to_string(colour.g);
     sequence += ";";
-    sequence += std::to_string(b);
+    sequence += std::to_string(colour.b);
     sequence += "m";
     return sequence;
 }
@@ -290,6 +281,8 @@ void Terminal::BackingStore::resize(int width, int height)
     {
         canvas->assign(count, Character{});
     }
+    this->pending_frame.assign(count, Character8{});
+    this->previous_frame.assign(count, Character8{});
     dirty.assign(count, true);
 }
 
@@ -309,6 +302,55 @@ Terminal::Character::Character(const std::string& value, const glm::vec4& foregr
     {
         set_glyph(decoded);
     }
+}
+
+Terminal::Character8::Character8()
+    : _glyph(U' '),
+      _glyph_colour(glm::u8vec3(0)),
+      _background_colour(glm::u8vec3(0))
+{
+}
+
+Terminal::Character8::Character8(const std::string& value, const glm::u8vec3& foreground, const glm::u8vec3& background)
+    : _glyph(U' '),
+      _glyph_colour(foreground),
+      _background_colour(background)
+{
+    char32_t decoded = U' ';
+    if (decode_utf8_first(value, decoded))
+    {
+        set_glyph(decoded);
+    }
+}
+
+void Terminal::Character8::set_glyph(char32_t glyph)
+{
+    _glyph = glyph;
+}
+
+char32_t Terminal::Character8::get_glyph() const
+{
+    return _glyph;
+}
+
+void Terminal::Character8::set_glyph_colour(const glm::u8vec3& colour)
+{
+    _glyph_colour = colour;
+}
+
+void Terminal::Character8::set_background_colour(const glm::u8vec3& colour)
+{
+    _background_colour = colour;
+}
+
+const glm::u8vec3& Terminal::Character8::get_glyph_colour() const
+{
+    return _glyph_colour;
+}
+
+const glm::u8vec3& Terminal::Character8::get_background_colour() const
+{
+    return _background_colour;
 }
 
 void Terminal::Character::set_glyph(char32_t glyph)
@@ -348,8 +390,6 @@ void Terminal::on_terminal_resize()
     {
         _size = size;
         _store.resize(_size.x, _size.y);
-        _current_glyph_colour = glm::vec4(-1.0f);
-        _current_background_colour = glm::vec4(-1.0f);
     }
 }
 
@@ -564,44 +604,132 @@ void Terminal::update()
         return;
     }
 
-    size_t total = _store.dirty.size();
-    if (total == 0)
+    eightbitify();
+    update_eightbit();
+}
+
+void Terminal::eightbitify()
+{
+    if (_store.buffer.empty() || _store.dirty.empty())
     {
         return;
     }
 
-    size_t index = 0;
-    while (index < total)
+    auto to_u8 = [](float value)
+    {
+        value = std::clamp(value, 0.0f, 1.0f);
+        return static_cast<uint8_t>(value * 255.0f + 0.5f);
+    };
+
+    for (size_t index = 0; index < _store.buffer.size(); ++index)
     {
         if (!_store.dirty[index])
         {
-            index += 1;
+            continue;
+        }
+
+        const Character& buffer_cell = _store.buffer[index];
+        const Character* desired = &buffer_cell;
+        const Character* canvas_cell = nullptr;
+        if (_store.canvas)
+        {
+            canvas_cell = &(*_store.canvas)[index];
+        }
+
+        if (is_empty_glyph(buffer_cell) && canvas_cell)
+        {
+            desired = canvas_cell;
+        }
+
+        glm::vec4 fg = desired->get_glyph_colour();
+        glm::vec4 bg = desired->get_background_colour();
+
+        if (canvas_cell && desired == &buffer_cell && bg.w < 1.0f)
+        {
+            glm::vec4 canvas_bg = canvas_cell->get_background_colour();
+            float inv = 1.0f - bg.w;
+            bg = glm::vec4(
+                bg.r * bg.w + canvas_bg.r * inv,
+                bg.g * bg.w + canvas_bg.g * inv,
+                bg.b * bg.w + canvas_bg.b * inv,
+                1.0f);
+        }
+
+        Character8& out = _store.pending_frame[index];
+        out.set_glyph(desired->get_glyph());
+        out.set_glyph_colour(glm::u8vec3(to_u8(fg.r), to_u8(fg.g), to_u8(fg.b)));
+        out.set_background_colour(glm::u8vec3(to_u8(bg.r), to_u8(bg.g), to_u8(bg.b)));
+
+        _store.dirty[index] = false;
+    }
+}
+
+void Terminal::update_eightbit()
+{
+    on_terminal_resize();
+    if (_size.x <= 0 || _size.y <= 0)
+    {
+        return;
+    }
+
+    size_t total = _store.pending_frame.size();
+    if (total == 0 || _store.previous_frame.size() != total)
+    {
+        return;
+    }
+
+    std::string sequence;
+    sequence.reserve(64 + total * 6);
+
+    bool have_fg = false;
+    bool have_bg = false;
+    glm::u8vec3 current_fg(0);
+    glm::u8vec3 current_bg(0);
+
+    for (size_t index = 0; index < total; ++index)
+    {
+        const Character8& next = _store.pending_frame[index];
+        const Character8& prev = _store.previous_frame[index];
+        if (next.get_glyph() == prev.get_glyph()
+            && u8vec3_equal(next.get_glyph_colour(), prev.get_glyph_colour())
+            && u8vec3_equal(next.get_background_colour(), prev.get_background_colour()))
+        {
             continue;
         }
 
         glm::ivec2 location = get_location(index);
         if (location.x < 0 || location.y < 0 || location.x >= _size.x || location.y >= _size.y)
         {
-            index += 1;
             continue;
         }
 
-        size_t remaining_in_row = static_cast<size_t>(_size.x - location.x);
-        size_t run = 0;
-        while (run < remaining_in_row && index + run < total && _store.dirty[index + run])
+        sequence += "\x1b[" + std::to_string(location.y + 1) + ";" + std::to_string(location.x + 1) + "H";
+
+        const glm::u8vec3& fg = next.get_glyph_colour();
+        const glm::u8vec3& bg = next.get_background_colour();
+
+        if (!have_fg || !u8vec3_equal(fg, current_fg))
         {
-            run += 1;
+            sequence += to_ansi_channel(fg, false);
+            current_fg = fg;
+            have_fg = true;
         }
 
-        if (run <= 1)
+        if (!have_bg || !u8vec3_equal(bg, current_bg))
         {
-            write_string_to_terminal(location, 1);
-            index += 1;
-            continue;
+            sequence += to_ansi_channel(bg, true);
+            current_bg = bg;
+            have_bg = true;
         }
 
-        write_string_to_terminal(location, run);
-        index += run;
+        sequence += encode_utf8_char(next.get_glyph());
+        _store.previous_frame[index] = next;
+    }
+
+    if (!sequence.empty())
+    {
+        std::fwrite(sequence.data(), 1, sequence.size(), stdout);
+        std::fflush(stdout);
     }
 }
 
@@ -645,87 +773,6 @@ void Terminal::clear_screen()
 #endif
 }
 
-void Terminal::write_string_to_terminal(const glm::ivec2& location, std::size_t length)
-{
-    if (length == 0)
-    {
-        return;
-    }
-    if (location.x < 0 || location.y < 0 || location.x >= _size.x || location.y >= _size.y)
-    {
-        return;
-    }
-
-    if (_store.buffer.empty())
-    {
-        return;
-    }
-
-    size_t start_index = get_index(location);
-    size_t remaining_in_row = static_cast<size_t>(_size.x - location.x);
-    size_t max_count = remaining_in_row;
-    if (start_index + max_count > _store.buffer.size())
-    {
-        max_count = _store.buffer.size() - start_index;
-    }
-
-    size_t count = max_count;
-    if (length < max_count)
-    {
-        count = length;
-    }
-    if (count == 0)
-    {
-        return;
-    }
-
-    std::string sequence;
-    sequence.reserve(64 + count * 12);
-
-    for (size_t offset = 0; offset < count; ++offset)
-    {
-        size_t index = start_index + offset;
-        Character& buffer_cell = _store.buffer[index];
-        Character& canvas_cell = (*_store.canvas)[index];
-        const Character* desired = &buffer_cell;
-        if (is_empty_glyph(buffer_cell))
-        {
-            desired = &canvas_cell;
-        }
-        glm::vec4 desired_foreground = desired->get_glyph_colour();
-        glm::vec4 desired_background = desired->get_background_colour();
-        if (desired_background.w == 0.0f)
-        {
-            desired_background = canvas_cell.get_background_colour();
-        }
-
-        glm::ivec2 cell_location = get_location(index);
-        sequence += "\x1b[" + std::to_string(cell_location.y + 1) + ";" + std::to_string(cell_location.x + 1) + "H";
-
-        if (!vec4_equal(desired_foreground, _current_glyph_colour))
-        {
-            sequence += to_ansi_channel(desired_foreground, false);
-            _current_glyph_colour = desired_foreground;
-        }
-
-        if (!vec4_equal(desired_background, _current_background_colour))
-        {
-            sequence += to_ansi_channel(desired_background, true);
-            _current_background_colour = desired_background;
-        }
-
-        sequence += encode_utf8_char(desired->get_glyph());
-        _store.dirty[index] = false;
-    }
-
-    if (!sequence.empty())
-    {
-        // std::cout << sequence;
-        // std::cout.flush();
-        std::fwrite(sequence.data(), 1, sequence.size(), stdout);
-        std::fflush(stdout);
-    }
-}
 
 glm::ivec2 Terminal::get_terminal_size() const
 {

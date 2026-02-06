@@ -7,6 +7,7 @@
 
 #include <glm/vec2.hpp>
 #include <glm/vec4.hpp>
+#include <glm/ext/vector_uint3_sized.hpp>
 
 class Terminal
 {
@@ -31,6 +32,26 @@ public:
         glm::vec4 _background_colour = glm::vec4(0.0f);
     };
 
+    class Character8
+    {
+    public:
+        Character8();
+        Character8(const std::string& value, const glm::u8vec3& foreground, const glm::u8vec3& background);
+
+        void set_glyph(char32_t glyph);
+        char32_t get_glyph() const;
+
+        void set_glyph_colour(const glm::u8vec3& colour);
+        void set_background_colour(const glm::u8vec3& colour);
+        const glm::u8vec3& get_glyph_colour() const;
+        const glm::u8vec3& get_background_colour() const;
+
+    private:
+        char32_t _glyph = U' ';
+        glm::u8vec3 _glyph_colour = glm::u8vec3(0);
+        glm::u8vec3 _background_colour = glm::u8vec3(0);
+    };
+
     class BackingStore
     {
     public:
@@ -41,6 +62,8 @@ public:
         int height = 0;
         std::vector<Character> buffer;
         std::vector<Character>* canvas = nullptr;
+        std::vector<Character8> pending_frame;
+        std::vector<Character8> previous_frame;
         std::vector<bool> dirty;
     };
 
@@ -51,6 +74,8 @@ public:
     void init();
     
     void update();
+    void eightbitify();
+    void update_eightbit();
     void mark_all_dirty();
 
     glm::ivec2 get_size() const;
@@ -69,7 +94,7 @@ public:
 
 private:
     void clear_screen();
-    void write_string_to_terminal(const glm::ivec2& location, std::size_t length);    
+    
 
     glm::ivec2 get_terminal_size() const;
     glm::ivec2& mutate_size();
@@ -77,6 +102,4 @@ private:
 private:
     glm::ivec2 _size = glm::ivec2(0);
     BackingStore _store;
-    glm::vec4 _current_glyph_colour = glm::vec4(-1.0f);
-    glm::vec4 _current_background_colour = glm::vec4(-1.0f);
 };
