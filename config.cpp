@@ -124,8 +124,6 @@ app_config load_config(const std::string& path)
     config.rice_background_tr = glm::vec4(0.082f, 0.086f, 0.106f, 1.0f);
     config.rice_background_bl = glm::vec4(0.090f, 0.094f, 0.114f, 1.0f);
     config.rice_background_br = glm::vec4(0.173f, 0.204f, 0.227f, 1.0f);
-    config.rice_origin_x = 100;
-    config.rice_origin_y = 50;
     config.rice_draw_art = true;
     config.rice_art = kDefaultRiceArt;
     config.draw_grid_canvas = false;
@@ -379,26 +377,6 @@ app_config load_config(const std::string& path)
         else if (key == "rice_background_br")
         {
             config.rice_background_br = parse_color(value, config.rice_background_br);
-        }
-        else if (key == "rice_origin_x")
-        {
-            try
-            {
-                config.rice_origin_x = std::stoi(value);
-            }
-            catch (...)
-            {
-            }
-        }
-        else if (key == "rice_origin_y")
-        {
-            try
-            {
-                config.rice_origin_y = std::stoi(value);
-            }
-            catch (...)
-            {
-            }
         }
         else if (key == "rice_draw_art")
         {

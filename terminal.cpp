@@ -688,19 +688,15 @@ void Terminal::write_string_to_terminal(const glm::ivec2& location, std::size_t 
         Character& buffer_cell = _store.buffer[index];
         Character& canvas_cell = (*_store.canvas)[index];
         const Character* desired = &buffer_cell;
-        glm::vec4 desired_foreground = buffer_cell.get_glyph_colour();
-        glm::vec4 desired_background = buffer_cell.get_background_colour();
-
-        if (buffer_cell.get_glyph() == U' ')
+        if (is_empty_glyph(buffer_cell))
         {
             desired = &canvas_cell;
-            desired_foreground = canvas_cell.get_glyph_colour();
-            desired_background = canvas_cell.get_background_colour();
         }
-
+        glm::vec4 desired_foreground = desired->get_glyph_colour();
+        glm::vec4 desired_background = desired->get_background_colour();
         if (desired_background.w == 0.0f)
         {
-            desired_background = (canvas_cell.get_background_colour() + canvas_cell.get_glyph_colour()) * 0.5f;
+            desired_background = canvas_cell.get_background_colour();
         }
 
         glm::ivec2 cell_location = get_location(index);

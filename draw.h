@@ -33,8 +33,6 @@ public:
     void clear_box(const glm::ivec2& min_corner, const glm::ivec2& size);
     void select_region(const glm::ivec2& min_corner, const glm::ivec2& size);
     void deselect_region(const glm::ivec2& min_corner, const glm::ivec2& size);
-    void set_overlay(const std::vector<Terminal::Character>& source, const glm::ivec2& location, const glm::ivec2& size);
-    void clear_overlay();
     glm::ivec2 get_terminal_size() const;
 
 private:

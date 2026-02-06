@@ -32,8 +32,6 @@ struct app_config
     glm::vec4 rice_background_tr;
     glm::vec4 rice_background_bl;
     glm::vec4 rice_background_br;
-    int rice_origin_x;
-    int rice_origin_y;
     bool rice_draw_art;
     std::vector<std::string> rice_art;
     bool draw_grid_canvas;
