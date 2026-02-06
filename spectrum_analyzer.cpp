@@ -341,23 +341,29 @@ void SpectrumAnalyzer::draw()
             if (y < full_cells)
             {
                 float t = (height > 1) ? static_cast<float>(y) / static_cast<float>(height - 1) : 0.0f;
-                glm::vec4 band_colour = low + (high - low) * t;
+                float step = (height > 1) ? 1.0f / static_cast<float>(height - 1) : 0.0f;
+                float t_top = std::min(1.0f, t + step * 0.5f);
+                glm::vec4 bottom_colour = low + (high - low) * t;
+                glm::vec4 top_colour = low + (high - low) * t_top;
                 renderer->draw_glyph(
                     cell_location,
-                    U'█',
-                    band_colour,
-                    glm::vec4(0.0f));
+                    U'▄',
+                    bottom_colour,
+                    top_colour);
             }
             else if (y == full_cells && remainder > 0.0f)
             {
                 float t = (height > 1) ? static_cast<float>(y) / static_cast<float>(height - 1) : 0.0f;
-                glm::vec4 band_colour = low + (high - low) * t;
+                float step = (height > 1) ? 1.0f / static_cast<float>(height - 1) : 0.0f;
+                float t_top = std::min(1.0f, t + step * 0.5f);
+                glm::vec4 bottom_colour = low + (high - low) * t;
+                glm::vec4 top_colour = low + (high - low) * t_top;
                 char32_t glyph = partial_block(remainder);
                 renderer->draw_glyph(
                     cell_location,
                     glyph,
-                    band_colour,
-                    glm::vec4(0.0f));
+                    bottom_colour,
+                    top_colour);
             }
             else
             {
