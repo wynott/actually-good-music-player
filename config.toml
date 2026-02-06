@@ -26,7 +26,7 @@ rice_draw_art = true
 draw_grid_canvas = true
 grid_spacing_x = 6
 grid_spacing_y = 3
-grid_label_every = 2
+grid_label_every = 1
 grid_background_tl = "0.086, 0.086, 0.106"
 grid_background_tr = "0.082, 0.086, 0.106"
 grid_background_bl = "0.090, 0.094, 0.114"
@@ -89,10 +89,10 @@ queue_width = 34
 queue_height = 8
 
 # --- Scrubber layout ---
-scrubber_origin_x = 0
-scrubber_origin_y = 15
-scrubber_width = 1000
-scrubber_height = 10
+scrubber_origin_x = 1
+scrubber_origin_y = 54
+scrubber_width = 220
+scrubber_height = 8
 
 # --- Browser colors (RGB 0..1) ---
 browser_normal_fg = "0.941, 0.941, 0.941"
