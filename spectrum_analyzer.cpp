@@ -439,7 +439,11 @@ void SpectrumAnalyzer::draw()
             {
                 x = max_start;
             }
-            renderer->draw_string(label.text, glm::ivec2(x, label_row));
+            renderer->draw_string_coloured(
+                label.text,
+                glm::ivec2(x, label_row),
+                config.ui_text_fg,
+                config.spectrum_colour_low);
         }
     }
 

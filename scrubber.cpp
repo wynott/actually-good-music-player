@@ -227,6 +227,18 @@ void Scrubber::draw(const app_config& config) const
         return;
     }
 
+    int label_y = _location.y + 1;
+    int label_start_x = _location.x + 1;
+    int label_end_x = _location.x + actual_size.x - 2;
+    for (int x = label_start_x; x <= label_end_x; ++x)
+    {
+        renderer->draw_glyph(
+            glm::ivec2(x, label_y),
+            U' ',
+            glm::vec4(0.0f),
+            glm::vec4(0.0f));
+    }
+
     auto format_time = [](int ms)
     {
         int total_seconds = std::max(0, ms / 1000);
@@ -395,9 +407,10 @@ void Scrubber::draw(const app_config& config) const
         }
     }
 
-    for (int y = 0; y < inner_height; ++y)
+    int bar_top = _location.y + 1;
+    int bar_bottom = _location.y + actual_size.y - 2;
+    for (int row_y = bar_top; row_y <= bar_bottom; ++row_y)
     {
-        int row_y = origin_y + y;
         renderer->draw_glyph(
             glm::ivec2(progress_x, row_y),
             U'│',
