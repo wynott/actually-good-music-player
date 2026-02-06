@@ -298,8 +298,40 @@ void Scrubber::draw(const app_config& config) const
         }
 
         float shaped = std::pow(std::clamp(amplitude, 0.0f, 1.0f), exponent);
-        int bar_height = std::max(1, static_cast<int>(std::round(shaped * static_cast<float>(inner_height))));
+        float bar_height_f = shaped * static_cast<float>(inner_height);
+        if (bar_height_f < 0.0f)
+        {
+            bar_height_f = 0.0f;
+        }
+        if (bar_height_f > static_cast<float>(inner_height))
+        {
+            bar_height_f = static_cast<float>(inner_height);
+        }
+        int full_cells = static_cast<int>(std::floor(bar_height_f));
+        float remainder = bar_height_f - static_cast<float>(full_cells);
+        if (full_cells >= inner_height)
+        {
+            full_cells = inner_height;
+            remainder = 0.0f;
+        }
         int column_x = origin_x + x;
+        auto partial_block = [](float frac)
+        {
+            if (frac <= 0.0f)
+            {
+                return U' ';
+            }
+            if (frac >= 1.0f)
+            {
+                return U'█';
+            }
+            static const char32_t levels[] = {U'▁', U'▂', U'▃', U'▅', U'▆', U'▇', U'▉', U'█'};
+            int idx = static_cast<int>(std::ceil(frac * 8.0f)) - 1;
+            if (idx < 0) idx = 0;
+            if (idx > 7) idx = 7;
+            return levels[idx];
+        };
+
         for (int y = 0; y < inner_height; ++y)
         {
             int row_y = origin_y + (inner_height - 1 - y);
@@ -308,9 +340,14 @@ void Scrubber::draw(const app_config& config) const
             glm::vec4 high = config.scrubber_colour_high;
             glm::vec4 fg = low + (high - low) * t;
             glm::vec4 bg(0.0f);
-            if (y < bar_height)
+            if (y < full_cells)
             {
                 renderer->draw_glyph(glm::ivec2(column_x, row_y), U'█', fg, bg);
+            }
+            else if (y == full_cells && remainder > 0.0f)
+            {
+                char32_t glyph = partial_block(remainder);
+                renderer->draw_glyph(glm::ivec2(column_x, row_y), glyph, fg, bg);
             }
             else
             {

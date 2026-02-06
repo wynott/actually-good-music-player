@@ -257,13 +257,15 @@ void SpectrumAnalyzer::draw()
 
     for (int y = min_y; y <= max_y; ++y)
     {
+        float t = (height > 1) ? static_cast<float>(max_y - y) / static_cast<float>(height - 1) : 0.0f;
+        glm::vec4 band_colour = config.spectrum_colour_low + (config.spectrum_colour_high - config.spectrum_colour_low) * t;
         for (int x = min_x; x <= max_x; ++x)
         {
             glm::ivec2 cell_location(x, y);
             renderer->draw_glyph(
                 cell_location,
                 U' ',
-                bar_colour,
+                band_colour,
                 glm::vec4(0.0f));
         }
     }
@@ -285,30 +287,58 @@ void SpectrumAnalyzer::draw()
         {
             value = 0.0f;
         }
+        float freq_t = (width > 1) ? static_cast<float>(x) / static_cast<float>(width - 1) : 0.0f;
+        float weight = 0.25f + 2.25f * freq_t;
+        value *= weight;
         if (value > 1.0f)
         {
             value = 1.0f;
         }
 
-        int bar_height = static_cast<int>(value * static_cast<float>(height) + 0.5f);
-        if (bar_height <= 0)
+        float clamped = std::clamp(value, 0.0f, 1.0f);
+        float bar_height_f = clamped * static_cast<float>(height);
+        if (bar_height_f <= 0.0f)
         {
-            continue;
+            bar_height_f = 0.0f;
         }
-        if (bar_height > height)
+        if (bar_height_f > static_cast<float>(height))
         {
-            bar_height = height;
+            bar_height_f = static_cast<float>(height);
+        }
+        int full_cells = static_cast<int>(std::floor(bar_height_f));
+        float remainder = bar_height_f - static_cast<float>(full_cells);
+        if (full_cells >= height)
+        {
+            full_cells = height;
+            remainder = 0.0f;
         }
 
         glm::vec4 low = config.spectrum_colour_low;
         glm::vec4 high = config.spectrum_colour_high;
 
         int draw_x = min_x + x;
+        auto partial_block = [](float frac)
+        {
+            if (frac <= 0.0f)
+            {
+                return U' ';
+            }
+            if (frac >= 1.0f)
+            {
+                return U'█';
+            }
+            static const char32_t levels[] = {U'▁', U'▂', U'▃', U'▅', U'▆', U'▇', U'▉', U'█'};
+            int idx = static_cast<int>(std::ceil(frac * 8.0f)) - 1;
+            if (idx < 0) idx = 0;
+            if (idx > 7) idx = 7;
+            return levels[idx];
+        };
+
         for (int y = 0; y < height; ++y)
         {
             int draw_y = max_y - y;
             glm::ivec2 cell_location(draw_x, draw_y);
-            if (y < bar_height)
+            if (y < full_cells)
             {
                 float t = (height > 1) ? static_cast<float>(y) / static_cast<float>(height - 1) : 0.0f;
                 glm::vec4 band_colour = low + (high - low) * t;
@@ -316,6 +346,25 @@ void SpectrumAnalyzer::draw()
                     cell_location,
                     U'█',
                     band_colour,
+                    glm::vec4(0.0f));
+            }
+            else if (y == full_cells && remainder > 0.0f)
+            {
+                float t = (height > 1) ? static_cast<float>(y) / static_cast<float>(height - 1) : 0.0f;
+                glm::vec4 band_colour = low + (high - low) * t;
+                char32_t glyph = partial_block(remainder);
+                renderer->draw_glyph(
+                    cell_location,
+                    glyph,
+                    band_colour,
+                    glm::vec4(0.0f));
+            }
+            else
+            {
+                renderer->draw_glyph(
+                    cell_location,
+                    U' ',
+                    glm::vec4(0.0f),
                     glm::vec4(0.0f));
             }
         }
@@ -335,7 +384,7 @@ void SpectrumAnalyzer::draw()
             {16000.0f, "16k"},
         };
 
-        float min_hz = 20.0f;
+        float min_hz = 40.0f;
         float max_hz = 20000.0f;
         float log_min = std::log(min_hz);
         float log_max = std::log(max_hz);
@@ -363,10 +412,4 @@ void SpectrumAnalyzer::draw()
         }
     }
 
-    if (height >= 3)
-    {
-        renderer->draw_string("0dB", glm::ivec2(min_x, min_y));
-        renderer->draw_string("-30", glm::ivec2(min_x, min_y + height / 2));
-        renderer->draw_string("-60", glm::ivec2(min_x, max_y));
-    }
 }
