@@ -360,6 +360,12 @@ void ActuallyGoodMP::run()
 
         _scrubber.draw(_config);
 
+        float gain = _scrubber.consume_peak_gain();
+        if (gain >= 0.0f)
+        {
+            _player.set_volume(gain);
+        }
+
         analyzer.update();
         analyzer.draw();
 

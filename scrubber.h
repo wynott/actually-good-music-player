@@ -21,6 +21,7 @@ public:
     void set_time_ms(int elapsed_ms, int total_ms);
     void set_waveform(const std::vector<float>& amplitudes_01);
     void request_waveform(const std::string& path, int columns);
+    float consume_peak_gain();
 
     void draw(const app_config& config) const;
 
@@ -31,4 +32,5 @@ private:
     std::vector<float> _waveform;
     mutable std::mutex _waveform_mutex;
     std::atomic<int> _waveform_job_id{0};
+    std::atomic<float> _pending_peak_gain{-1.0f};
 };

@@ -39,8 +39,12 @@ void Scrubber::set_waveform(const std::vector<float>& amplitudes_01)
     _waveform = std::move(clamped);
 }
 
-static std::vector<float> build_waveform(const std::string& path, int columns)
+static std::vector<float> build_waveform(const std::string& path, int columns, float* out_peak)
 {
+    if (out_peak)
+    {
+        *out_peak = 0.0f;
+    }
     if (columns <= 0)
     {
         return {};
@@ -129,6 +133,11 @@ static std::vector<float> build_waveform(const std::string& path, int columns)
         }
     }
 
+    if (out_peak)
+    {
+        *out_peak = max_peak;
+    }
+
     if (max_peak <= 1.0e-6f)
     {
         return std::vector<float>(peaks.size(), 0.0f);
@@ -157,13 +166,32 @@ void Scrubber::request_waveform(const std::string& path, int columns)
     std::string path_copy = path;
     std::thread([this, path_copy, columns, job_id]()
     {
-        std::vector<float> waveform = build_waveform(path_copy, columns);
+        float peak = 0.0f;
+        std::vector<float> waveform = build_waveform(path_copy, columns, &peak);
+
+        float gain = 1.0f;
+        if (peak > 1.0e-6f)
+        {
+            float peak_db = 20.0f * std::log10(peak);
+            float target_db = -1.0f;
+            float gain_db = target_db - peak_db;
+            gain = std::pow(10.0f, gain_db / 20.0f);
+            if (gain < 0.1f) gain = 0.1f;
+            if (gain > 3.0f) gain = 3.0f;
+        }
+
         if (_waveform_job_id.load() != job_id)
         {
             return;
         }
+        _pending_peak_gain.store(gain);
         set_waveform(waveform);
     }).detach();
+}
+
+float Scrubber::consume_peak_gain()
+{
+    return _pending_peak_gain.exchange(-1.0f);
 }
 
 void Scrubber::draw(const app_config& config) const

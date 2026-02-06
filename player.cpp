@@ -261,6 +261,15 @@ void Player::set_spectrum_analyzer(SpectrumAnalyzer* analyzer)
     g_spectrum_analyzer = analyzer;
 }
 
+void Player::set_volume(float volume)
+{
+    if (volume < 0.0f)
+    {
+        volume = 0.0f;
+    }
+    ma_sound_set_volume(&g_sound, volume);
+}
+
 void Player::handle_track_finished()
 {
     on_track_finished();

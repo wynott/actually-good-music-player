@@ -35,6 +35,7 @@ public:
     void set_song_browser(Browser* browser);
     void set_queue(class Queue* queue);
     void set_spectrum_analyzer(SpectrumAnalyzer* analyzer);
+    void set_volume(float volume);
     void handle_track_finished();
 
 private:
