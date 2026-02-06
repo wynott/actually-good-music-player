@@ -23,6 +23,7 @@ private:
         float y = 0.0f;
         float vx = 0.0f;
         float vy = 0.0f;
+        float depth = 1.0f;
         float life = 0.0f;
     };
 

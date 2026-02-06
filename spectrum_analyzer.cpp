@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <random>
 
 #include "app.h"
 #include "draw.h"
@@ -73,6 +74,12 @@ void SpectrumAnalyzer::push_samples(const float* interleaved, int frames, int ch
 
 void SpectrumAnalyzer::update()
 {
+    int target_bands = std::max(1, _size.x);
+    if (_band_count != target_bands)
+    {
+        _band_count = target_bands;
+    }
+
     ensure_buffer();
 
     std::vector<float> window;
@@ -316,7 +323,16 @@ void SpectrumAnalyzer::draw()
         }
 
         float threshold = config.spectrum_particle_threshold;
-        if (clamped >= threshold && height > 0)
+        float emit_chance = 0.0f;
+        if (clamped >= threshold)
+        {
+            float denom = std::max(1.0e-6f, 1.0f - threshold);
+            emit_chance = std::clamp((clamped - threshold) / denom, 0.0f, 1.0f);
+        }
+
+        static std::mt19937 rng(std::random_device{}());
+        static std::uniform_real_distribution<float> dist(0.0f, 1.0f);
+        if (emit_chance > 0.0f && dist(rng) <= emit_chance && height > 0)
         {
             int top_y = (remainder > 0.0f) ? full_cells : (full_cells - 1);
             if (top_y < 0)

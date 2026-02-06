@@ -70,9 +70,10 @@ void ParticleSystem::update(float dt_seconds)
 
     for (auto& particle : _particles)
     {
-        particle.vy += 40.0f * dt_seconds;
-        particle.x += particle.vx * dt_seconds;
-        particle.y += particle.vy * dt_seconds;
+        float speed = particle.depth;
+        particle.vy += 40.0f * dt_seconds * speed;
+        particle.x += particle.vx * dt_seconds * speed;
+        particle.y += particle.vy * dt_seconds * speed;
     }
 
     auto renderer = Renderer::get();
@@ -144,6 +145,10 @@ void ParticleSystem::draw(const app_config& config) const
         }
         float t = (size.y > 1) ? static_cast<float>(y) / static_cast<float>(size.y - 1) : 0.0f;
         glm::vec4 color = top_color + (bottom_color - top_color) * t;
+        float shade = std::clamp(particle.depth, 0.25f, 1.0f);
+        color.r *= shade;
+        color.g *= shade;
+        color.b *= shade;
         uint32_t particle_id = static_cast<uint32_t>(i + 1);
         renderer->draw_particle_glyph(glm::ivec2(x, y), glyph, color, glm::vec4(0.0f), particle_id);
     }
@@ -161,9 +166,11 @@ void ParticleSystem::emit_debug(int x, int y, float norm_x)
     particle.y = static_cast<float>(y);
     static std::mt19937 rng(std::random_device{}());
     std::uniform_real_distribution<float> drift(-8.0f, 8.0f);
+    std::uniform_real_distribution<float> depth_dist(0.4f, 1.25f);
     float bias = (std::clamp(norm_x, 0.0f, 1.0f) * 2.0f - 1.0f) * _angle_bias;
-    particle.vx = bias + drift(rng);
-    particle.vy = -30.0f;
+    particle.depth = depth_dist(rng);
+    particle.vx = (bias + drift(rng));
+    particle.vy = -55.0f;
     particle.life = 0.6f;
     _particles.push_back(particle);
 }

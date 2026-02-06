@@ -389,7 +389,16 @@ void ActuallyGoodMP::run()
         glm::ivec2 term_size = _terminal.get_size();
         int fps_value = static_cast<int>(smoothed_fps + 0.5);
         std::string fps_text = std::to_string(fps_value) + " fps";
-        int fps_x = term_size.x - static_cast<int>(fps_text.size());
+        static int fps_text_width = 0;
+        if (static_cast<int>(fps_text.size()) > fps_text_width)
+        {
+            fps_text_width = static_cast<int>(fps_text.size());
+        }
+        if (static_cast<int>(fps_text.size()) < fps_text_width)
+        {
+            fps_text.append(static_cast<size_t>(fps_text_width - static_cast<int>(fps_text.size())), ' ');
+        }
+        int fps_x = term_size.x - fps_text_width;
 
         if (fps_x < 0)
         {
