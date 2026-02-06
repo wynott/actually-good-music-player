@@ -1,4 +1,5 @@
 #include "player.h"
+#include "event.h"
 
 #include "browser.h"
 #include "queue.h"
@@ -193,8 +194,15 @@ void Player::seek_ms(int position_ms)
 
 void Player::set_current_track(const std::string& path)
 {
+    if (_current_track == path)
+    {
+        return;
+    }
+
     _current_track = path;
+    _context = player_context{};
     _context.track_path = path;
+    EventBus::instance().publish(Event{"player.track_changed", _current_track});
 }
 
 const std::string& Player::get_current_track() const

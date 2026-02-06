@@ -130,6 +130,25 @@ void ActuallyGoodMP::init()
             update_canvas_from_album();
         });
 
+    _track_changed_subscription = EventBus::instance().subscribe(
+        "player.track_changed",
+        [this](const Event& event)
+        {
+            if (event.payload.empty())
+            {
+                return;
+            }
+
+            _player.ensure_context_from_track();
+            auto context = _player.get_context();
+            _album_art.set_track(_player.get_current_track(), _config, context.artist, context.album);
+            _album_art.refresh(_config, 0, 0);
+            update_canvas_from_album();
+
+            int scrubber_columns = std::max(1, _config.scrubber_width - 2);
+            _scrubber.request_waveform(_player.get_current_track(), scrubber_columns);
+        });
+
     _queue_subscription = EventBus::instance().subscribe(
         "queue.enqueue",
         [this](const Event& event)
@@ -452,6 +471,12 @@ void ActuallyGoodMP::shutdown()
     {
         EventBus::instance().unsubscribe(_album_art_subscription);
         _album_art_subscription = 0;
+    }
+
+    if (_track_changed_subscription != 0)
+    {
+        EventBus::instance().unsubscribe(_track_changed_subscription);
+        _track_changed_subscription = 0;
     }
 
     if (_queue_subscription != 0)
