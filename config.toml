@@ -117,6 +117,8 @@ rice_background_tl = "0.086, 0.086, 0.106"
 rice_background_tr = "0.082, 0.086, 0.106"
 rice_background_bl = "0.090, 0.094, 0.114"
 rice_background_br = "0.173, 0.204, 0.227"
+rice_origin_x = 80
+rice_origin_y = 40
 
 # --- Online art ---
 # Uses MusicBrainz + Cover Art Archive.

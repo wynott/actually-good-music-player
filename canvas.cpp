@@ -106,15 +106,6 @@ void Canvas::build_default(const app_config& config)
         config.rice_background_bl,
         config.rice_background_br);
 
-    if (config.rice_draw_art)
-    {
-        std::vector<std::string> lines = config.rice_art;
-        if (lines.empty())
-        {
-            lines.push_back("AGMP");
-        }
-        draw_art(lines, config.rice_colour);
-    }
 
     spdlog::trace("Canvas::build_default() end");
 }
@@ -248,15 +239,6 @@ void Canvas::build_grid(const app_config& config)
 
     write_label(left_x, top_y, std::to_string(std::max(0, _size.y - 1)));
 
-    if (config.rice_draw_art)
-    {
-        std::vector<std::string> lines = config.rice_art;
-        if (lines.empty())
-        {
-            lines.push_back("AGMP");
-        }
-        draw_art(lines, config.rice_colour);
-    }
 
     spdlog::trace("Canvas::build_grid() end");
 }

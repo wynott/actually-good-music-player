@@ -3,6 +3,7 @@
 
 #include "draw.h"
 #include "app.h"
+#include "app.h"
 #include "spdlog/spdlog.h"
 #include "terminal.h"
 
@@ -362,6 +363,71 @@ void Renderer::select_region(const glm::ivec2& min_corner, const glm::ivec2& siz
 void Renderer::deselect_region(const glm::ivec2& min_corner, const glm::ivec2& size)
 {
     _terminal.deselect_region(min_corner, size);
+}
+
+void Renderer::set_overlay(const std::vector<Terminal::Character>& source, const glm::ivec2& location, const glm::ivec2& size)
+{
+    Canvas* canvas = ActuallyGoodMP::instance().get_canvas();
+    if (!canvas)
+    {
+        return;
+    }
+
+    std::vector<Terminal::Character>* buffer = canvas->mutate_buffer();
+    if (!buffer)
+    {
+        return;
+    }
+
+    int width = size.x;
+    int height = size.y;
+    if (width <= 0 || height <= 0)
+    {
+        return;
+    }
+
+    for (int y = 0; y < height; ++y)
+    {
+        for (int x = 0; x < width; ++x)
+        {
+            size_t index = static_cast<size_t>(y * width + x);
+            if (index >= source.size())
+            {
+                continue;
+            }
+            const Terminal::Character& overlay_glyph = source[index];
+            if (overlay_glyph.get_glyph() == U' ')
+            {
+                continue;
+            }
+            int target_x = location.x + x;
+            int target_y = location.y + y;
+            if (target_x < 0 || target_y < 0 || target_x >= canvas->get_size().x || target_y >= canvas->get_size().y)
+            {
+                continue;
+            }
+            size_t canvas_index = static_cast<size_t>(target_y * canvas->get_size().x + target_x);
+            if (canvas_index >= buffer->size())
+            {
+                continue;
+            }
+            Terminal::Character& canvas_cell = (*buffer)[canvas_index];
+            canvas_cell.set_glyph(overlay_glyph.get_glyph());
+            canvas_cell.set_glyph_colour(overlay_glyph.get_glyph_colour());
+        }
+    }
+
+    _terminal.set_canvas(canvas->get_buffer());
+}
+
+void Renderer::clear_overlay()
+{
+    Canvas* canvas = ActuallyGoodMP::instance().get_canvas();
+    if (!canvas)
+    {
+        return;
+    }
+    _terminal.set_canvas(canvas->get_buffer());
 }
 
 glm::ivec2 Renderer::get_terminal_size() const
