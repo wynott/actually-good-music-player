@@ -81,6 +81,8 @@ void ParticleSystem::update(float dt_seconds)
         return;
     }
 
+    renderer->clear_juice();
+
     glm::ivec2 size = renderer->get_terminal_size();
     if (size.y <= 0)
     {
@@ -106,8 +108,6 @@ void ParticleSystem::draw(const app_config& config) const
     {
         return;
     }
-
-    renderer->clear_particle_ids();
 
     glm::ivec2 size = renderer->get_terminal_size();
     if (size.x <= 0 || size.y <= 0)

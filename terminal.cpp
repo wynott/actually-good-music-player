@@ -281,10 +281,9 @@ void Terminal::BackingStore::resize(int width, int height)
     {
         canvas->assign(count, Character{});
     }
+    this->juice.assign(count, Character{});
     this->pending_frame.assign(count, Character8{});
     this->previous_frame.assign(count, Character8{});
-    this->particle_ids.assign(count, 0);
-    this->previous_particle_ids.assign(count, 0);
     dirty.assign(count, true);
 }
 
@@ -309,14 +308,16 @@ Terminal::Character::Character(const std::string& value, const glm::vec4& foregr
 Terminal::Character8::Character8()
     : _glyph(U' '),
       _glyph_colour(glm::u8vec3(0)),
-      _background_colour(glm::u8vec3(0))
+      _background_colour(glm::u8vec3(0)),
+      _particle_id(0)
 {
 }
 
 Terminal::Character8::Character8(const std::string& value, const glm::u8vec3& foreground, const glm::u8vec3& background)
     : _glyph(U' '),
       _glyph_colour(foreground),
-      _background_colour(background)
+      _background_colour(background),
+      _particle_id(0)
 {
     char32_t decoded = U' ';
     if (decode_utf8_first(value, decoded))
@@ -356,6 +357,29 @@ const glm::u8vec3& Terminal::Character8::get_background_colour() const
     return _background_colour;
 }
 
+void Terminal::Character8::set_particle_id(uint32_t particle_id)
+{
+    _particle_id = particle_id;
+}
+
+uint32_t Terminal::Character8::get_particle_id() const
+{
+    return _particle_id;
+}
+
+bool Terminal::Character8::operator==(const Character8& other) const
+{
+    return _glyph == other._glyph
+        && u8vec3_equal(_glyph_colour, other._glyph_colour)
+        && u8vec3_equal(_background_colour, other._background_colour)
+        && _particle_id == other._particle_id;
+}
+
+bool Terminal::Character8::operator!=(const Character8& other) const
+{
+    return !(*this == other);
+}
+
 
 void Terminal::Character::set_glyph(char32_t glyph)
 {
@@ -377,6 +401,7 @@ void Terminal::Character::set_background_colour(const glm::vec4& colour)
     _background_colour = colour;
 }
 
+
 const glm::vec4& Terminal::Character::get_glyph_colour() const
 {
     return _glyph_colour;
@@ -386,6 +411,7 @@ const glm::vec4& Terminal::Character::get_background_colour() const
 {
     return _background_colour;
 }
+
 
 void Terminal::on_terminal_resize()
 {
@@ -461,6 +487,7 @@ void Terminal::set_glyph(char32_t glyph, const glm::ivec2& location)
     }
 
     _store.buffer[index].set_glyph(glyph);
+    _store.pending_frame[index].set_particle_id(0u);
     _store.dirty[index] = true;
 }
 
@@ -483,6 +510,7 @@ void Terminal::set_glyph(const glm::ivec2& location, char32_t glyph, const glm::
     glm::vec4 bg = normalize_colour(background);
     cell.set_glyph_colour(fg);
     cell.set_background_colour(bg);
+    _store.pending_frame[index].set_particle_id(0u);
     _store.dirty[index] = true;
 }
 
@@ -494,18 +522,18 @@ void Terminal::set_particle_glyph(const glm::ivec2& location, char32_t glyph, co
     }
 
     size_t index = get_index(location);
-    if (index >= _store.buffer.size() || index >= _store.particle_ids.size())
+    if (index >= _store.buffer.size())
     {
         return;
     }
 
-    Terminal::Character& cell = _store.buffer[index];
+    Terminal::Character& cell = _store.juice[index];
     cell.set_glyph(glyph);
     glm::vec4 fg = normalize_colour(foreground);
     glm::vec4 bg = normalize_colour(background);
     cell.set_glyph_colour(fg);
     cell.set_background_colour(bg);
-    _store.particle_ids[index] = particle_id;
+    _store.pending_frame[index].set_particle_id(particle_id);
     _store.dirty[index] = true;
 }
 
@@ -526,7 +554,26 @@ void Terminal::clear_cell(const glm::ivec2& location)
     cell.set_glyph(U' ');
     cell.set_glyph_colour(glm::vec4(0.0f));
     cell.set_background_colour(glm::vec4(0.0f));
+    _store.pending_frame[index].set_particle_id(0u);
     _store.dirty[index] = true;
+}
+
+void Terminal::clear_juice()
+{
+    if (_store.juice.empty())
+    {
+        return;
+    }
+
+    for (size_t index = 0; index < _store.juice.size(); ++index)
+    {
+        if (!is_empty_glyph(_store.juice[index]))
+        {
+            _store.juice[index] = Character{};
+            _store.pending_frame[index].set_particle_id(0u);
+            _store.dirty[index] = true;
+        }
+    }
 }
 
 void Terminal::set_canvas(const std::vector<Character>& source)
@@ -635,23 +682,6 @@ void Terminal::update()
     update_eightbit();
 }
 
-void Terminal::clear_particle_ids()
-{
-    if (_store.particle_ids.empty() || _store.previous_particle_ids.empty())
-    {
-        return;
-    }
-
-    size_t total = _store.particle_ids.size();
-    for (size_t index = 0; index < total; ++index)
-    {
-        if (_store.previous_particle_ids[index] != 0)
-        {
-            _store.dirty[index] = true;
-        }
-        _store.particle_ids[index] = 0;
-    }
-}
 
 void Terminal::eightbitify()
 {
@@ -675,6 +705,7 @@ void Terminal::eightbitify()
         }
 
         const Character& buffer_cell = _store.buffer[index];
+        const Character& juice_cell = _store.juice[index];
         const Character* desired = &buffer_cell;
         const Character* canvas_cell = nullptr;
         if (_store.canvas)
@@ -687,21 +718,12 @@ void Terminal::eightbitify()
             desired = canvas_cell;
         }
 
-        uint32_t particle_id = 0;
-        uint32_t prev_particle_id = 0;
-        if (index < _store.particle_ids.size())
+        const Character* overlay = nullptr;
+        if (!is_empty_glyph(juice_cell))
         {
-            particle_id = _store.particle_ids[index];
-        }
-        if (index < _store.previous_particle_ids.size())
-        {
-            prev_particle_id = _store.previous_particle_ids[index];
+            overlay = &juice_cell;
         }
 
-        if (particle_id == 0 && prev_particle_id != 0 && canvas_cell)
-        {
-            desired = canvas_cell;
-        }
 
         glm::vec4 fg = desired->get_glyph_colour();
         glm::vec4 bg = desired->get_background_colour();
@@ -715,6 +737,24 @@ void Terminal::eightbitify()
                 bg.g * bg.w + canvas_bg.g * inv,
                 bg.b * bg.w + canvas_bg.b * inv,
                 1.0f);
+        }
+
+        if (overlay)
+        {
+            glm::vec4 overlay_fg = overlay->get_glyph_colour();
+            glm::vec4 overlay_bg = overlay->get_background_colour();
+            if (overlay_bg.w < 1.0f)
+            {
+                float inv = 1.0f - overlay_bg.w;
+                overlay_bg = glm::vec4(
+                    overlay_bg.r * overlay_bg.w + bg.r * inv,
+                    overlay_bg.g * overlay_bg.w + bg.g * inv,
+                    overlay_bg.b * overlay_bg.w + bg.b * inv,
+                    1.0f);
+            }
+            fg = overlay_fg;
+            bg = overlay_bg;
+            desired = overlay;
         }
 
         Character8& out = _store.pending_frame[index];
@@ -736,9 +776,7 @@ void Terminal::update_eightbit()
 
     size_t total = _store.pending_frame.size();
     if (total == 0
-        || _store.previous_frame.size() != total
-        || _store.particle_ids.size() != total
-        || _store.previous_particle_ids.size() != total)
+        || _store.previous_frame.size() != total)
     {
         return;
     }
@@ -755,12 +793,7 @@ void Terminal::update_eightbit()
     {
         const Character8& next = _store.pending_frame[index];
         const Character8& prev = _store.previous_frame[index];
-        uint32_t particle_id = _store.particle_ids[index];
-        uint32_t prev_particle_id = _store.previous_particle_ids[index];
-        if (next.get_glyph() == prev.get_glyph()
-            && u8vec3_equal(next.get_glyph_colour(), prev.get_glyph_colour())
-            && u8vec3_equal(next.get_background_colour(), prev.get_background_colour())
-            && particle_id == prev_particle_id)
+        if (next == prev)
         {
             continue;
         }
@@ -792,7 +825,6 @@ void Terminal::update_eightbit()
 
         sequence += encode_utf8_char(next.get_glyph());
         _store.previous_frame[index] = next;
-        _store.previous_particle_ids[index] = particle_id;
     }
 
     if (!sequence.empty())

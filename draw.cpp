@@ -331,6 +331,11 @@ void Renderer::draw_particle_glyph(
     _terminal.set_particle_glyph(location, glyph, foreground, background, particle_id);
 }
 
+void Renderer::clear_juice()
+{
+    _terminal.clear_juice();
+}
+
 void Renderer::clear_box(const glm::ivec2& min_corner, const glm::ivec2& size)
 {
     spdlog::trace("Renderer::clear_box()");
@@ -378,9 +383,4 @@ void Renderer::deselect_region(const glm::ivec2& min_corner, const glm::ivec2& s
 glm::ivec2 Renderer::get_terminal_size() const
 {
     return _terminal.get_size();
-}
-
-void Renderer::clear_particle_ids()
-{
-    _terminal.clear_particle_ids();
 }

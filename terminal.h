@@ -46,11 +46,17 @@ public:
         void set_background_colour(const glm::u8vec3& colour);
         const glm::u8vec3& get_glyph_colour() const;
         const glm::u8vec3& get_background_colour() const;
+        void set_particle_id(uint32_t particle_id);
+        uint32_t get_particle_id() const;
+
+        bool operator==(const Character8& other) const;
+        bool operator!=(const Character8& other) const;
 
     private:
         char32_t _glyph = U' ';
         glm::u8vec3 _glyph_colour = glm::u8vec3(0);
         glm::u8vec3 _background_colour = glm::u8vec3(0);
+        uint32_t _particle_id = 0;
     };
 
     class BackingStore
@@ -63,10 +69,9 @@ public:
         int height = 0;
         std::vector<Character> buffer;
         std::vector<Character>* canvas = nullptr;
+        std::vector<Character> juice;
         std::vector<Character8> pending_frame;
         std::vector<Character8> previous_frame;
-        std::vector<uint32_t> particle_ids;
-        std::vector<uint32_t> previous_particle_ids;
         std::vector<bool> dirty;
     };
 
@@ -92,7 +97,7 @@ public:
     void set_particle_glyph(const glm::ivec2& location, char32_t glyph, const glm::vec4& foreground, const glm::vec4& background, uint32_t particle_id);
     void clear_cell(const glm::ivec2& location);
     void set_canvas(const std::vector<Character>& source);
-    void clear_particle_ids();
+    void clear_juice();
     void select_region(const glm::ivec2& location, const glm::ivec2& size);
     void deselect_region(const glm::ivec2& location, const glm::ivec2& size);
 
