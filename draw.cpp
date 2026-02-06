@@ -360,6 +360,16 @@ void Renderer::clear_box(const glm::ivec2& min_corner, const glm::ivec2& size)
     }
 }
 
+void Renderer::select_region(const glm::ivec2& min_corner, const glm::ivec2& size)
+{
+    _terminal.select_region(min_corner, size);
+}
+
+void Renderer::deselect_region(const glm::ivec2& min_corner, const glm::ivec2& size)
+{
+    _terminal.deselect_region(min_corner, size);
+}
+
 glm::ivec2 Renderer::get_terminal_size() const
 {
     return _terminal.get_size();

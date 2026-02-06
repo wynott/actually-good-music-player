@@ -63,6 +63,8 @@ public:
     void set_glyph(const glm::ivec2& location, char32_t glyph, const glm::vec4& foreground, const glm::vec4& background);
     void clear_cell(const glm::ivec2& location);
     void set_canvas(const std::vector<Character>& source);
+    void select_region(const glm::ivec2& location, const glm::ivec2& size);
+    void deselect_region(const glm::ivec2& location, const glm::ivec2& size);
 
 
 private:

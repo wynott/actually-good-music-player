@@ -1,4 +1,6 @@
 #include "terminal.h"
+#include "terminal.h"
+
 #include "app.h"
 #include "spdlog/spdlog.h"
 
@@ -471,6 +473,70 @@ void Terminal::set_canvas(const std::vector<Character>& source)
     {
         (*_store.canvas)[i] = source[i];
         _store.dirty[i] = true;
+    }
+}
+
+void Terminal::select_region(const glm::ivec2& location, const glm::ivec2& size)
+{
+    if (size.x <= 0 || size.y <= 0)
+    {
+        return;
+    }
+
+    int min_x = std::max(0, location.x);
+    int min_y = std::max(0, location.y);
+    int max_x = std::min(_size.x - 1, location.x + size.x - 1);
+    int max_y = std::min(_size.y - 1, location.y + size.y - 1);
+    if (min_x > max_x || min_y > max_y)
+    {
+        return;
+    }
+
+    glm::vec4 highlight(0.2f, 0.2f, 0.2f, 1.0f);
+    for (int y = min_y; y <= max_y; ++y)
+    {
+        for (int x = min_x; x <= max_x; ++x)
+        {
+            size_t index = get_index(glm::ivec2(x, y));
+            if (index >= _store.buffer.size())
+            {
+                continue;
+            }
+            _store.buffer[index].set_background_colour(highlight);
+            _store.dirty[index] = true;
+        }
+    }
+}
+
+void Terminal::deselect_region(const glm::ivec2& location, const glm::ivec2& size)
+{
+    if (size.x <= 0 || size.y <= 0)
+    {
+        return;
+    }
+
+    int min_x = std::max(0, location.x);
+    int min_y = std::max(0, location.y);
+    int max_x = std::min(_size.x - 1, location.x + size.x - 1);
+    int max_y = std::min(_size.y - 1, location.y + size.y - 1);
+    if (min_x > max_x || min_y > max_y)
+    {
+        return;
+    }
+
+    glm::vec4 clear_bg(0.0f);
+    for (int y = min_y; y <= max_y; ++y)
+    {
+        for (int x = min_x; x <= max_x; ++x)
+        {
+            size_t index = get_index(glm::ivec2(x, y));
+            if (index >= _store.buffer.size())
+            {
+                continue;
+            }
+            _store.buffer[index].set_background_colour(clear_bg);
+            _store.dirty[index] = true;
+        }
     }
 }
 

@@ -31,6 +31,8 @@ public:
     void draw_string_canvas_bg(const std::string& text, const glm::ivec2& location, const glm::vec4& foreground);
     void draw_glyph(const glm::ivec2& location, char32_t glyph, const glm::vec4& foreground, const glm::vec4& background);
     void clear_box(const glm::ivec2& min_corner, const glm::ivec2& size);
+    void select_region(const glm::ivec2& min_corner, const glm::ivec2& size);
+    void deselect_region(const glm::ivec2& min_corner, const glm::ivec2& size);
     glm::ivec2 get_terminal_size() const;
 
 private:
