@@ -138,6 +138,7 @@ app_config load_config(const std::string& path)
     config.spectrum_colour_low = glm::vec4(0.251f, 0.502f, 1.0f, 1.0f);
     config.spectrum_colour_high = glm::vec4(1.0f, 0.376f, 0.251f, 1.0f);
     config.spectrum_particle_threshold = 0.995f;
+    config.spectrum_juice_multiplier = 1.0f;
     config.scrubber_colour_low = config.spectrum_colour_low;
     config.scrubber_colour_high = config.spectrum_colour_high;
     config.particle_angle_bias = 12.0f;
@@ -466,6 +467,16 @@ app_config load_config(const std::string& path)
             {
                 float threshold = std::stof(value);
                 config.spectrum_particle_threshold = std::clamp(threshold, 0.0f, 1.0f);
+            }
+            catch (...)
+            {
+            }
+        }
+        else if (key == "spectrum_juice_multiplier")
+        {
+            try
+            {
+                config.spectrum_juice_multiplier = std::max(0.0f, std::stof(value));
             }
             catch (...)
             {

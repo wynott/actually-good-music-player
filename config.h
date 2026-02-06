@@ -46,6 +46,7 @@ struct app_config
     glm::vec4 spectrum_colour_low;
     glm::vec4 spectrum_colour_high;
     float spectrum_particle_threshold;
+    float spectrum_juice_multiplier;
     glm::vec4 scrubber_colour_low;
     glm::vec4 scrubber_colour_high;
     float particle_angle_bias;
