@@ -148,6 +148,10 @@ app_config load_config(const std::string& path)
     config.queue_origin_y = config.spectrum_origin_y + config.spectrum_height + 1;
     config.queue_width = config.metadata_width;
     config.queue_height = 8;
+    config.scrubber_origin_x = config.metadata_origin_x;
+    config.scrubber_origin_y = config.queue_origin_y + config.queue_height + 1;
+    config.scrubber_width = config.metadata_width * 3;
+    config.scrubber_height = 35;
     config.col_width_artist = 20;
     config.col_width_album = 24;
     config.col_width_song = 30;
@@ -567,6 +571,46 @@ app_config load_config(const std::string& path)
             try
             {
                 config.queue_height = std::max(1, std::stoi(value));
+            }
+            catch (...)
+            {
+            }
+        }
+        else if (key == "scrubber_origin_x")
+        {
+            try
+            {
+                config.scrubber_origin_x = std::max(0, std::stoi(value));
+            }
+            catch (...)
+            {
+            }
+        }
+        else if (key == "scrubber_origin_y")
+        {
+            try
+            {
+                config.scrubber_origin_y = std::max(0, std::stoi(value));
+            }
+            catch (...)
+            {
+            }
+        }
+        else if (key == "scrubber_width")
+        {
+            try
+            {
+                config.scrubber_width = std::max(1, std::stoi(value));
+            }
+            catch (...)
+            {
+            }
+        }
+        else if (key == "scrubber_height")
+        {
+            try
+            {
+                config.scrubber_height = std::max(1, std::stoi(value));
             }
             catch (...)
             {

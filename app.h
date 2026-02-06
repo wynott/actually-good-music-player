@@ -7,6 +7,7 @@
 #include "player.h"
 #include "queue.h"
 #include "rice.h"
+#include "scrubber.h"
 #include "terminal.h"
 
 class ActuallyGoodMP
@@ -52,5 +53,6 @@ private:
     Canvas _canvas;
     Rice _rice;
     Queue _queue;
+    Scrubber _scrubber;
 
 };

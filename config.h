@@ -56,6 +56,10 @@ struct app_config
     int queue_origin_y;
     int queue_width;
     int queue_height;
+    int scrubber_origin_x;
+    int scrubber_origin_y;
+    int scrubber_width;
+    int scrubber_height;
     int col_width_artist;
     int col_width_album;
     int col_width_song;

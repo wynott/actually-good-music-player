@@ -125,6 +125,9 @@ void ActuallyGoodMP::init()
             _album_art.set_track(_player.get_current_track(), _config, context.artist, context.album);
             _album_art.refresh(_config, 0, 0);
             update_canvas_from_album();
+
+            int scrubber_columns = std::max(1, _config.scrubber_width - 2);
+            _scrubber.request_waveform(_player.get_current_track(), scrubber_columns);
         });
 
     _album_art_subscription = EventBus::instance().subscribe(
@@ -176,6 +179,9 @@ void ActuallyGoodMP::run()
     _queue.set_location(glm::ivec2(_config.queue_origin_x, _config.queue_origin_y));
     _queue.set_size(glm::ivec2(_config.queue_width, _config.queue_height));
 
+    _scrubber.set_location(glm::ivec2(_config.scrubber_origin_x, _config.scrubber_origin_y));
+    _scrubber.set_size(glm::ivec2(_config.scrubber_width, _config.scrubber_height));
+
     analyzer.set_location(glm::ivec2(_config.spectrum_origin_x, _config.spectrum_origin_y));
     analyzer.set_size(glm::ivec2(_config.spectrum_width, _config.spectrum_height));
     _player.set_spectrum_analyzer(&analyzer);
@@ -186,6 +192,7 @@ void ActuallyGoodMP::run()
     _song_browser.draw();
     _action_browser.draw();
     _queue.draw(_config);
+    _scrubber.draw(_config);
     if (!_config.safe_mode)
     {
         track_metadata meta;
@@ -226,12 +233,15 @@ void ActuallyGoodMP::run()
     _album_art.refresh(_config, 0, 0);
     update_canvas_from_album();
 
+    _scrubber.request_waveform(_player.get_current_track(), std::max(1, _config.scrubber_width - 2));
+
 
     _artist_browser.draw();
     _album_browser.draw();
     _song_browser.draw();
     _action_browser.draw();
     _queue.draw(_config);
+    _scrubber.draw(_config);
  
     if (!_config.safe_mode)
     {
@@ -291,8 +301,15 @@ void ActuallyGoodMP::run()
             if (read_track_metadata(_player.get_current_track(), meta))
             {
                 metadata_panel.draw(_config, meta);
+                if (meta.duration_ms > 0)
+                {
+                    float progress = static_cast<float>(_player.get_position_ms()) / static_cast<float>(meta.duration_ms);
+                    _scrubber.set_progress(progress);
+                }
             }
         }
+
+        _scrubber.draw(_config);
 
         analyzer.update();
         analyzer.draw();

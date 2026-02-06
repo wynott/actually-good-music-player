@@ -24,6 +24,8 @@ project "agmp"
         "draw.h",
         "queue.cpp",
         "queue.h",
+        "scrubber.cpp",
+        "scrubber.h",
         "event.cpp",
         "event.h",
         "http.cpp",
