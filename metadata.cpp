@@ -35,21 +35,45 @@ static std::string decode_text(const uint8_t* data, size_t size, uint8_t encodin
         return std::string(reinterpret_cast<const char*>(data), reinterpret_cast<const char*>(data + size));
     }
 
-    std::string result;
-    result.reserve(size);
-    for (size_t i = 0; i + 1 < size; i += 2)
+    bool little_endian = true;
+    size_t offset = 0;
+    if (encoding == 1 && size >= 2)
     {
-        if (data[i] == 0 && data[i + 1] == 0)
+        uint16_t bom = static_cast<uint16_t>(data[0] << 8) | static_cast<uint16_t>(data[1]);
+        if (bom == 0xFEFF)
+        {
+            little_endian = false;
+            offset = 2;
+        }
+        else if (bom == 0xFFFE)
+        {
+            little_endian = true;
+            offset = 2;
+        }
+    }
+    else if (encoding == 2)
+    {
+        little_endian = false;
+    }
+
+    std::string result;
+    result.reserve(size / 2);
+    for (size_t i = offset; i + 1 < size; i += 2)
+    {
+        uint16_t code = little_endian
+            ? static_cast<uint16_t>(data[i] | (data[i + 1] << 8))
+            : static_cast<uint16_t>((data[i] << 8) | data[i + 1]);
+        if (code == 0)
         {
             break;
         }
-        if (data[i + 1] != 0)
+        if (code <= 0xFF)
         {
-            result.push_back(static_cast<char>(data[i + 1]));
+            result.push_back(static_cast<char>(code));
         }
         else
         {
-            result.push_back(static_cast<char>(data[i]));
+            result.push_back('?');
         }
     }
     return result;

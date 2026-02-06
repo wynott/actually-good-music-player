@@ -5,6 +5,7 @@
 #include "browser.h"
 #include "canvas.h"
 #include "player.h"
+#include "queue.h"
 #include "rice.h"
 #include "terminal.h"
 
@@ -39,13 +40,17 @@ private:
     Browser _artist_browser;
     Browser _album_browser;
     Browser _song_browser;
+    Browser _action_browser;
     AlbumArt _album_art;
     app_config _config;
     Player _player;
     Terminal _terminal;
     int _mp3_selected_subscription = 0;
     int _album_art_subscription = 0;
+    int _queue_subscription = 0;
+    int _stop_play_subscription = 0;
     Canvas _canvas;
     Rice _rice;
+    Queue _queue;
 
 };

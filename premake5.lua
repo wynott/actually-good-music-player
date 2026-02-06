@@ -22,6 +22,8 @@ project "agmp"
         "canvas.h",
         "draw.cpp",
         "draw.h",
+        "queue.cpp",
+        "queue.h",
         "event.cpp",
         "event.h",
         "http.cpp",

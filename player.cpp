@@ -1,6 +1,7 @@
 #include "player.h"
 
 #include "browser.h"
+#include "queue.h"
 #include "spectrum_analyzer.h"
 
 #include <filesystem>
@@ -249,6 +250,11 @@ void Player::set_song_browser(Browser* browser)
     _song_browser = browser;
 }
 
+void Player::set_queue(Queue* queue)
+{
+    _queue = queue;
+}
+
 void Player::set_spectrum_analyzer(SpectrumAnalyzer* analyzer)
 {
     _spectrum_analyzer = analyzer;
@@ -262,6 +268,18 @@ void Player::handle_track_finished()
 
 void Player::on_track_finished()
 {
+    if (_queue)
+    {
+        std::string next_path;
+        if (_queue->pop_next(next_path))
+        {
+            set_current_track(next_path);
+            stop_playback();
+            start_playback(get_current_track());
+        }
+        return;
+    }
+
     if (!_song_browser)
     {
         return;

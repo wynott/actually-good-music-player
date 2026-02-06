@@ -135,6 +135,26 @@ void ActuallyGoodMP::init()
             update_canvas_from_album();
         });
 
+    _queue_subscription = EventBus::instance().subscribe(
+        "queue.enqueue",
+        [this](const Event& event)
+        {
+            if (event.payload.empty())
+            {
+                return;
+            }
+
+            _queue.enqueue(event.payload);
+            _queue.draw(_config);
+        });
+
+    _stop_play_subscription = EventBus::instance().subscribe(
+        "player.stop",
+        [this](const Event&)
+        {
+            _player.stop_playback();
+        });
+
     init_browsers();
 }
 
@@ -153,13 +173,19 @@ void ActuallyGoodMP::run()
     metadata_panel.set_location(glm::ivec2(metadata_origin_x, metadata_origin_y));
     metadata_panel.set_size(glm::ivec2(metadata_width, metadata_height));
 
+    _queue.set_location(glm::ivec2(_config.queue_origin_x, _config.queue_origin_y));
+    _queue.set_size(glm::ivec2(_config.queue_width, _config.queue_height));
+
     analyzer.set_location(glm::ivec2(_config.spectrum_origin_x, _config.spectrum_origin_y));
     analyzer.set_size(glm::ivec2(_config.spectrum_width, _config.spectrum_height));
     _player.set_spectrum_analyzer(&analyzer);
+    _player.set_queue(&_queue);
 
     _artist_browser.draw();
     _album_browser.draw();
     _song_browser.draw();
+    _action_browser.draw();
+    _queue.draw(_config);
     if (!_config.safe_mode)
     {
         track_metadata meta;
@@ -191,6 +217,8 @@ void ActuallyGoodMP::run()
     }
 
     state.apply_to_browsers(_artist_browser, _album_browser, _song_browser);
+    _queue.set_paths(state.queue_paths);
+    _queue.draw(_config);
 
     _player.ensure_context_from_track();
     player_context context = _player.get_context();
@@ -202,6 +230,8 @@ void ActuallyGoodMP::run()
     _artist_browser.draw();
     _album_browser.draw();
     _song_browser.draw();
+    _action_browser.draw();
+    _queue.draw(_config);
  
     if (!_config.safe_mode)
     {
@@ -341,6 +371,7 @@ void ActuallyGoodMP::shutdown()
     save.album_path = _album_browser.get_path().string();
     save.song_path = _song_browser.get_path().string();
     save.song_index = static_cast<int>(_song_browser.get_selected_index());
+    save.queue_paths = _queue.get_paths();
     save_state("state.toml", save);
 
     _player.stop_playback();
@@ -357,6 +388,18 @@ void ActuallyGoodMP::shutdown()
     {
         EventBus::instance().unsubscribe(_album_art_subscription);
         _album_art_subscription = 0;
+    }
+
+    if (_queue_subscription != 0)
+    {
+        EventBus::instance().unsubscribe(_queue_subscription);
+        _queue_subscription = 0;
+    }
+
+    if (_stop_play_subscription != 0)
+    {
+        EventBus::instance().unsubscribe(_stop_play_subscription);
+        _stop_play_subscription = 0;
     }
     
     input_shutdown();
@@ -391,6 +434,7 @@ void ActuallyGoodMP::init_browsers()
     glm::ivec2 artist_browser_size(std::max(1, _config.col_width_artist + 2), 12);
     glm::ivec2 album_browser_size(std::max(1, _config.col_width_album + 2), 12);
     glm::ivec2 song_browser_size(std::max(1, _config.col_width_song + 2), 12);
+    glm::ivec2 action_browser_size(std::max(1, _config.col_width_song + 2), 6);
 
     _artist_browser.set_name("Artist");
     _artist_browser.set_location(browser_origin);
@@ -404,14 +448,23 @@ void ActuallyGoodMP::init_browsers()
        browser_origin.y));
     _song_browser.set_size(song_browser_size);
 
+    _action_browser.set_name("Actions");
+    _action_browser.set_location(glm::ivec2(
+        _song_browser.get_location().x + song_browser_size.x + browser_gap,
+        _song_browser.get_location().y));
+    _action_browser.set_size(action_browser_size);
+
     _artist_browser.set_right(&_album_browser);
     _album_browser.set_left(&_artist_browser);
     _album_browser.set_right(&_song_browser);
     _song_browser.set_left(&_album_browser);
+    _song_browser.set_right(&_action_browser);
+    _action_browser.set_left(&_song_browser);
 
     _artist_browser.set_focused(true);
     
     _player.set_song_browser(&_song_browser);
 
     _artist_browser.set_path(_config.library_path);
+    _action_browser.refresh();
 }

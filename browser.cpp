@@ -180,20 +180,24 @@ Mp3Item::Mp3Item(Browser* owner, const std::string& name, const std::filesystem:
 
 void Mp3Item::on_soft_select()
 {
-}
-
-void Mp3Item::on_select()
-{
     Browser* owner = get_owner();
     if (!owner)
     {
         return;
     }
 
-    EventBus::instance().publish(Event{
-        "browser.mp3_selected",
-        get_path().string()
-    });
+    Browser* right = owner->get_right();
+    if (right)
+    {
+        std::vector<std::unique_ptr<BrowserItem>> items;
+        items.push_back(std::make_unique<Mp3PlayNowItem>(right, "Play now", get_path()));
+        items.push_back(std::make_unique<QueueItem>(right, "Enqueue", get_path()));
+        right->set_custom_contents(std::move(items));
+    }
+}
+
+void Mp3Item::on_select()
+{
 }
 
 glm::ivec2 Mp3Item::get_size() const
@@ -283,6 +287,214 @@ void Mp3Item::scan_and_populate(
     }
 }
 
+QueueItem::QueueItem(Browser* owner, const std::string& name, const std::filesystem::path& path)
+    : BrowserItem(owner, name, path)
+{
+}
+
+void QueueItem::on_soft_select()
+{
+}
+
+void QueueItem::on_select()
+{
+    EventBus::instance().publish(Event{
+        "queue.enqueue",
+        get_path().string()
+    });
+}
+
+glm::ivec2 QueueItem::get_size() const
+{
+    return glm::ivec2(static_cast<int>(get_name().size()) + 1, 1);
+}
+
+void QueueItem::draw(const glm::ivec2& location, const glm::ivec2& size) const
+{
+    auto renderer = Renderer::get();
+    if (!renderer)
+    {
+        return;
+    }
+
+    int width = size.x;
+    int height = size.y;
+    if (width <= 0 || height <= 0)
+    {
+        return;
+    }
+
+    const app_config& config = ActuallyGoodMP::instance().get_config();
+    glm::vec4 normal_fg = config.browser_normal_fg;
+
+    std::string line = get_name();
+    int max_name = std::max(0, width);
+    if (static_cast<int>(line.size()) > max_name)
+    {
+        line.resize(static_cast<size_t>(max_name));
+    }
+
+    if (static_cast<int>(line.size()) < width)
+    {
+        line.append(static_cast<size_t>(width - line.size()), ' ');
+    }
+
+    renderer->draw_string_coloured(line, location, normal_fg, glm::vec4(0.0f));
+
+    if (height > 1)
+    {
+        renderer->clear_box(
+            glm::ivec2(location.x, location.y + 1),
+            glm::ivec2(width, height - 1));
+    }
+}
+
+void QueueItem::scan_and_populate(
+    const std::filesystem::path&,
+    Browser*,
+    std::vector<std::unique_ptr<BrowserItem>>& out) const
+{
+    (void)out;
+}
+
+Mp3PlayNowItem::Mp3PlayNowItem(Browser* owner, const std::string& name, const std::filesystem::path& path)
+    : BrowserItem(owner, name, path)
+{
+}
+
+StopPlayItem::StopPlayItem(Browser* owner, const std::string& name, const std::filesystem::path& path)
+    : BrowserItem(owner, name, path)
+{
+}
+
+void StopPlayItem::on_soft_select()
+{
+}
+
+void StopPlayItem::on_select()
+{
+    EventBus::instance().publish(Event{
+        "player.stop",
+        std::string()
+    });
+}
+
+glm::ivec2 StopPlayItem::get_size() const
+{
+    return glm::ivec2(static_cast<int>(get_name().size()), 1);
+}
+
+void StopPlayItem::draw(const glm::ivec2& location, const glm::ivec2& size) const
+{
+    auto renderer = Renderer::get();
+    if (!renderer)
+    {
+        return;
+    }
+
+    int width = size.x;
+    int height = size.y;
+    if (width <= 0 || height <= 0)
+    {
+        return;
+    }
+
+    const app_config& config = ActuallyGoodMP::instance().get_config();
+    glm::vec4 normal_fg = config.browser_normal_fg;
+
+    std::string line = get_name();
+    if (static_cast<int>(line.size()) > width)
+    {
+        line.resize(static_cast<size_t>(width));
+    }
+
+    if (static_cast<int>(line.size()) < width)
+    {
+        line.append(static_cast<size_t>(width - line.size()), ' ');
+    }
+
+    renderer->draw_string_coloured(line, location, normal_fg, glm::vec4(0.0f));
+
+    if (height > 1)
+    {
+        renderer->clear_box(
+            glm::ivec2(location.x, location.y + 1),
+            glm::ivec2(width, height - 1));
+    }
+}
+
+void StopPlayItem::scan_and_populate(
+    const std::filesystem::path&,
+    Browser*,
+    std::vector<std::unique_ptr<BrowserItem>>& out) const
+{
+    (void)out;
+}
+
+void Mp3PlayNowItem::on_soft_select()
+{
+}
+
+void Mp3PlayNowItem::on_select()
+{
+    EventBus::instance().publish(Event{
+        "browser.mp3_selected",
+        get_path().string()
+    });
+}
+
+glm::ivec2 Mp3PlayNowItem::get_size() const
+{
+    return glm::ivec2(static_cast<int>(get_name().size()), 1);
+}
+
+void Mp3PlayNowItem::draw(const glm::ivec2& location, const glm::ivec2& size) const
+{
+    auto renderer = Renderer::get();
+    if (!renderer)
+    {
+        return;
+    }
+
+    int width = size.x;
+    int height = size.y;
+    if (width <= 0 || height <= 0)
+    {
+        return;
+    }
+
+    const app_config& config = ActuallyGoodMP::instance().get_config();
+    glm::vec4 normal_fg = config.browser_normal_fg;
+
+    std::string line = get_name();
+    if (static_cast<int>(line.size()) > width)
+    {
+        line.resize(static_cast<size_t>(width));
+    }
+
+    if (static_cast<int>(line.size()) < width)
+    {
+        line.append(static_cast<size_t>(width - line.size()), ' ');
+    }
+
+    renderer->draw_string_coloured(line, location, normal_fg, glm::vec4(0.0f));
+
+    if (height > 1)
+    {
+        renderer->clear_box(
+            glm::ivec2(location.x, location.y + 1),
+            glm::ivec2(width, height - 1));
+    }
+}
+
+void Mp3PlayNowItem::scan_and_populate(
+    const std::filesystem::path&,
+    Browser*,
+    std::vector<std::unique_ptr<BrowserItem>>& out) const
+{
+    (void)out;
+}
+
 
 void Browser::set_path(const std::filesystem::path& path)
 {
@@ -308,6 +520,22 @@ void Browser::set_selected_index(size_t index)
     }
 
     update_scroll_for_selection();
+}
+
+void Browser::set_custom_contents(std::vector<std::unique_ptr<BrowserItem>> contents)
+{
+    _contents = std::move(contents);
+    _scroll_offset = 0;
+    if (_contents.empty())
+    {
+        _selected_index = 0;
+    }
+    else
+    {
+        _selected_index = 0;
+    }
+    resize_to_fit_contents();
+    draw();
 }
 
 void Browser::move_selection(int direction)
@@ -773,7 +1001,10 @@ void Browser::soft_select()
 
     if (_right != nullptr)
     {
-        if (dynamic_cast<const FolderItem*>(_contents[_selected_index].get()) == nullptr)
+        const BrowserItem* current = _contents[_selected_index].get();
+        bool is_folder = dynamic_cast<const FolderItem*>(current) != nullptr;
+        bool is_mp3 = dynamic_cast<const Mp3Item*>(current) != nullptr;
+        if (!is_folder && !is_mp3)
         {
             size_t folder_index = _contents.size();
             for (size_t i = 0; i < _contents.size(); ++i)

@@ -4,6 +4,7 @@
 #include <string>
 
 class Browser;
+class Queue;
 class SpectrumAnalyzer;
 
 struct player_context
@@ -32,6 +33,7 @@ public:
     player_context get_context() const;
     void ensure_context_from_track();
     void set_song_browser(Browser* browser);
+    void set_queue(class Queue* queue);
     void set_spectrum_analyzer(SpectrumAnalyzer* analyzer);
     void handle_track_finished();
 
@@ -42,4 +44,5 @@ private:
     player_context _context;
     Browser* _song_browser = nullptr;
     SpectrumAnalyzer* _spectrum_analyzer = nullptr;
+    Queue* _queue = nullptr;
 };

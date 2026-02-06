@@ -144,6 +144,10 @@ app_config load_config(const std::string& path)
     config.spectrum_origin_y = config.metadata_origin_y + config.metadata_height + 1;
     config.spectrum_width = config.metadata_width;
     config.spectrum_height = 8;
+    config.queue_origin_x = config.metadata_origin_x;
+    config.queue_origin_y = config.spectrum_origin_y + config.spectrum_height + 1;
+    config.queue_width = config.metadata_width;
+    config.queue_height = 8;
     config.col_width_artist = 20;
     config.col_width_album = 24;
     config.col_width_song = 30;
@@ -523,6 +527,46 @@ app_config load_config(const std::string& path)
             try
             {
                 config.spectrum_height = std::max(1, std::stoi(value));
+            }
+            catch (...)
+            {
+            }
+        }
+        else if (key == "queue_origin_x")
+        {
+            try
+            {
+                config.queue_origin_x = std::max(0, std::stoi(value));
+            }
+            catch (...)
+            {
+            }
+        }
+        else if (key == "queue_origin_y")
+        {
+            try
+            {
+                config.queue_origin_y = std::max(0, std::stoi(value));
+            }
+            catch (...)
+            {
+            }
+        }
+        else if (key == "queue_width")
+        {
+            try
+            {
+                config.queue_width = std::max(1, std::stoi(value));
+            }
+            catch (...)
+            {
+            }
+        }
+        else if (key == "queue_height")
+        {
+            try
+            {
+                config.queue_height = std::max(1, std::stoi(value));
             }
             catch (...)
             {

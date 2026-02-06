@@ -82,6 +82,60 @@ public:
         std::vector<std::unique_ptr<BrowserItem>>& out) const override;
 };
 
+class QueueItem : public BrowserItem
+{
+public:
+    QueueItem(Browser* owner, const std::string& name, const std::filesystem::path& path);
+    QueueItem() = default;
+
+    void on_soft_select() override;
+    void on_select() override;
+    glm::ivec2 get_size() const override;
+    void draw(
+        const glm::ivec2& location,
+        const glm::ivec2& size) const override;
+    void scan_and_populate(
+        const std::filesystem::path& directory,
+        Browser* owner,
+        std::vector<std::unique_ptr<BrowserItem>>& out) const override;
+};
+
+class Mp3PlayNowItem : public BrowserItem
+{
+public:
+    Mp3PlayNowItem(Browser* owner, const std::string& name, const std::filesystem::path& path);
+    Mp3PlayNowItem() = default;
+
+    void on_soft_select() override;
+    void on_select() override;
+    glm::ivec2 get_size() const override;
+    void draw(
+        const glm::ivec2& location,
+        const glm::ivec2& size) const override;
+    void scan_and_populate(
+        const std::filesystem::path& directory,
+        Browser* owner,
+        std::vector<std::unique_ptr<BrowserItem>>& out) const override;
+};
+
+class StopPlayItem : public BrowserItem
+{
+public:
+    StopPlayItem(Browser* owner, const std::string& name, const std::filesystem::path& path);
+    StopPlayItem() = default;
+
+    void on_soft_select() override;
+    void on_select() override;
+    glm::ivec2 get_size() const override;
+    void draw(
+        const glm::ivec2& location,
+        const glm::ivec2& size) const override;
+    void scan_and_populate(
+        const std::filesystem::path& directory,
+        Browser* owner,
+        std::vector<std::unique_ptr<BrowserItem>>& out) const override;
+};
+
 class Browser
 {
 public:
@@ -101,6 +155,7 @@ public:
     void set_name(const std::string& name);
     void set_path(const std::filesystem::path& path);
     void set_selected_index(size_t index);
+    void set_custom_contents(std::vector<std::unique_ptr<BrowserItem>> contents);
     void move_selection(int direction);
     void soft_select();
     void resize_to_fit_contents();

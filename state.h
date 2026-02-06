@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 #include "player.h"
 
@@ -13,6 +14,7 @@ struct app_state
     std::string album_path;
     std::string song_path;
     int song_index;
+    std::vector<std::string> queue_paths;
 
     void apply_to_browsers(Browser& artist, Browser& album, Browser& song) const;
 };

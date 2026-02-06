@@ -52,6 +52,10 @@ struct app_config
     int spectrum_origin_y;
     int spectrum_width;
     int spectrum_height;
+    int queue_origin_x;
+    int queue_origin_y;
+    int queue_width;
+    int queue_height;
     int col_width_artist;
     int col_width_album;
     int col_width_song;
