@@ -6,6 +6,7 @@
 
 #include <glm/vec4.hpp>
 
+#include "actually_good_module.h"
 #include "config.h"
 
 class Renderer;
@@ -27,18 +28,12 @@ struct track_metadata
 
 bool read_track_metadata(const std::string& path, track_metadata& metadata);
 
-class MetadataPanel
+class MetadataPanel : public ActuallyGoodModule
 {
 public:
     MetadataPanel();
     MetadataPanel(const glm::ivec2& location, const glm::ivec2& size);
 
-    void set_location(const glm::ivec2& location);
-    void set_size(const glm::ivec2& size);
-
     void draw(const app_config& config, const track_metadata& meta);
 
-private:
-    glm::ivec2 _location = glm::ivec2(0);
-    glm::ivec2 _size = glm::ivec2(0);
 };

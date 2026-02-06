@@ -15,16 +15,6 @@ SpectrumAnalyzer::SpectrumAnalyzer()
     ensure_buffer();
 }
 
-void SpectrumAnalyzer::set_location(const glm::ivec2& location)
-{
-    _location = location;
-}
-
-void SpectrumAnalyzer::set_size(const glm::ivec2& size)
-{
-    _size = size;
-}
-
 void SpectrumAnalyzer::ensure_buffer()
 {
     if (_fft_size <= 0)

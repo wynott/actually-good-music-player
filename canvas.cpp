@@ -5,6 +5,8 @@
 #include "album_art.h"
 
 #include <algorithm>
+
+#include <spdlog/spdlog.h>
 Canvas::Canvas(const glm::ivec2& size)
 {
     resize(size);
@@ -91,8 +93,10 @@ void Canvas::fill_gradient(
 
 void Canvas::build_default(const app_config& config)
 {
+    spdlog::trace("Canvas::build_default() begin");
     if (_size.x <= 0 || _size.y <= 0)
     {
+        spdlog::trace("Canvas::build_default() end");
         return;
     }
 
@@ -111,6 +115,8 @@ void Canvas::build_default(const app_config& config)
         }
         draw_art(lines, config.rice_colour);
     }
+
+    spdlog::trace("Canvas::build_default() end");
 }
 
 void Canvas::build_from_album(const app_config& config, const AlbumArt& album_art)
@@ -139,8 +145,10 @@ void Canvas::build_from_album(const app_config& config, const AlbumArt& album_ar
 
 void Canvas::build_grid(const app_config& config)
 {
+    spdlog::trace("Canvas::build_grid() begin");
     if (_size.x <= 0 || _size.y <= 0)
     {
+        spdlog::trace("Canvas::build_grid() end");
         return;
     }
 
@@ -249,6 +257,8 @@ void Canvas::build_grid(const app_config& config)
         }
         draw_art(lines, config.rice_colour);
     }
+
+    spdlog::trace("Canvas::build_grid() end");
 }
 
 static bool decode_utf8(const std::string& text, size_t& index, char32_t& out)

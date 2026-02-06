@@ -76,9 +76,9 @@ void ActuallyGoodMP::init()
     spdlog::drop("agmp");
     auto log = spdlog::basic_logger_mt("agmp", "agmp.log", true);
     spdlog::set_default_logger(log);
-    spdlog::set_level(spdlog::level::info);
+    spdlog::set_level(spdlog::level::trace);
     spdlog::set_pattern("[%H:%M:%S] [%l] %v");
-    spdlog::flush_on(spdlog::level::info);
+    spdlog::flush_on(spdlog::level::trace);
 
     _terminal.init();
 
@@ -501,6 +501,7 @@ void ActuallyGoodMP::update_canvas_from_album()
 
 void ActuallyGoodMP::init_browsers()
 {
+    spdlog::trace("ActuallyGoodMP::init_browsers() begin");
     int browser_gap = _config.browser_padding;
     glm::ivec2 browser_origin(2, 3);
     glm::ivec2 artist_browser_size(std::max(1, _config.col_width_artist + 2), 12);
@@ -539,4 +540,5 @@ void ActuallyGoodMP::init_browsers()
 
     _artist_browser.set_path(_config.library_path);
     _action_browser.refresh();
+    spdlog::trace("ActuallyGoodMP::init_browsers() end");
 }

@@ -9,6 +9,7 @@
 #include <glm/vec2.hpp>
 #include <glm/vec4.hpp>
 
+#include "actually_good_module.h"
 #include "config.h"
 
 class Player;
@@ -154,7 +155,7 @@ public:
         std::vector<std::unique_ptr<BrowserItem>>& out) const override;
 };
 
-class Browser
+class Browser : public ActuallyGoodModule
 {
 public:
     static void init_all(
@@ -203,9 +204,7 @@ public:
     void draw() const;
 
 private:
-    glm::ivec2 _location = glm::ivec2(0);
     std::string _name;
-    glm::ivec2 _size = glm::ivec2(0); // width from config file, height is contents up to available space
     std::vector<std::unique_ptr<BrowserItem>> _contents;
     std::filesystem::path _path;
     size_t _selected_index = 0;

@@ -20,11 +20,11 @@ Browser::Browser(
     const std::filesystem::path& path,
     const glm::ivec2& location,
     const glm::ivec2& size)
-    : _location(location),
-      _name(name),
-      _size(size),
+    : _name(name),
       _path(path)
 {
+    set_location(location);
+    set_size(size);
     refresh_contents();
 }
 
@@ -32,12 +32,12 @@ Browser::Browser(
 
 void Browser::set_location(const glm::ivec2& location)
 {
-    _location = location;
+    ActuallyGoodModule::set_location(location);
 }
 
 void Browser::set_size(const glm::ivec2& size)
 {
-    _size = size;
+    ActuallyGoodModule::set_size(size);
 }
 
 void Browser::set_name(const std::string& name)
@@ -812,12 +812,12 @@ void Browser::set_right(Browser* right)
 
 const glm::ivec2& Browser::get_location() const
 {
-    return _location;
+    return ActuallyGoodModule::get_location();
 }
 
 const glm::ivec2& Browser::get_size() const
 {
-    return _size;
+    return ActuallyGoodModule::get_size();
 }
 
 const std::string& Browser::get_name() const

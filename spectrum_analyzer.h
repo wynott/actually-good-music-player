@@ -6,17 +6,15 @@
 #include <mutex>
 #include <vector>
 
+#include "actually_good_module.h"
 #include "terminal.h"
 
 class Renderer;
 
-class SpectrumAnalyzer
+class SpectrumAnalyzer : public ActuallyGoodModule
 {
 public:
     SpectrumAnalyzer();
-
-    void set_location(const glm::ivec2& location);
-    void set_size(const glm::ivec2& size);
 
     void push_samples(const float* interleaved, int frames, int channels);
     void update();
@@ -25,9 +23,6 @@ public:
 private:
     void ensure_buffer();
     void compute_bands(const std::vector<float>& window);
-
-    glm::ivec2 _location = glm::ivec2(0);
-    glm::ivec2 _size = glm::ivec2(0);
 
     std::mutex _mutex;
     std::vector<float> _ring;

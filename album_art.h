@@ -1,6 +1,7 @@
 #pragma once
 #pragma once
 
+#include "actually_good_module.h"
 #include "terminal.h"
 #include "config.h"
 
@@ -25,18 +26,12 @@ struct art_result
 bool load_mp3_embedded_art(const char* path, std::vector<unsigned char>& image_data);
 
 
-class AlbumArt
+class AlbumArt : public ActuallyGoodModule
 {
 public:
     AlbumArt();
     AlbumArt(const glm::ivec2& location, const glm::ivec2& size);
     ~AlbumArt();
-
-    void set_location(const glm::ivec2& location);
-    void set_size(const glm::ivec2& size);
-
-    const glm::ivec2& get_location() const;
-    const glm::ivec2& get_size() const;
 
     bool load(const std::vector<unsigned char>& image_data);
     void draw() const;
@@ -75,7 +70,5 @@ private:
     std::string _current_album;
 
 private:
-    glm::ivec2 _location = glm::ivec2(0);
-    glm::ivec2 _size = glm::ivec2(0);
     std::vector<Terminal::Character> _pixels;
 };

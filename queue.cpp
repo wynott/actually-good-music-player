@@ -10,9 +10,9 @@
 Queue::Queue() = default;
 
 Queue::Queue(const glm::ivec2& location, const glm::ivec2& size)
-    : _location(location),
-      _size(size)
 {
+    set_location(location);
+    set_size(size);
 }
 
 void Queue::ensure_stop_item()
@@ -27,16 +27,6 @@ void Queue::ensure_stop_item()
     }
 
     _items.push_back(std::make_unique<StopPlayItem>(nullptr, "Stop", std::filesystem::path()));
-}
-
-void Queue::set_location(const glm::ivec2& location)
-{
-    _location = location;
-}
-
-void Queue::set_size(const glm::ivec2& size)
-{
-    _size = size;
 }
 
 class QueueEntryItem : public BrowserItem

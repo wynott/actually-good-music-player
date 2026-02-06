@@ -9,16 +9,14 @@
 
 #include <glm/vec2.hpp>
 
+#include "actually_good_module.h"
 #include "config.h"
 
-class Scrubber
+class Scrubber : public ActuallyGoodModule
 {
 public:
     Scrubber();
     Scrubber(const glm::ivec2& location, const glm::ivec2& size);
-
-    void set_location(const glm::ivec2& location);
-    void set_size(const glm::ivec2& size);
     void set_progress(float progress_01);
     void set_time_ms(int elapsed_ms, int total_ms);
     void set_waveform(const std::vector<float>& amplitudes_01);
@@ -27,8 +25,6 @@ public:
     void draw(const app_config& config) const;
 
 private:
-    glm::ivec2 _location = glm::ivec2(0);
-    glm::ivec2 _size = glm::ivec2(0);
     float _progress = 0.0f;
     int _elapsed_ms = 0;
     int _total_ms = 0;

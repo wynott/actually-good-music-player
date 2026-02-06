@@ -1,6 +1,5 @@
 
 #include <algorithm>
-#include <iostream>
 
 #include "draw.h"
 #include "app.h"
@@ -40,8 +39,11 @@ static glm::vec4 default_text_colour()
 
 void Renderer::set_canvas(const std::vector<Terminal::Character>& source)
 {
-    spdlog::trace("Renderer::set_canvas(buffer)");
+    spdlog::trace("Renderer::set_canvas() begin");
+
     _terminal.set_canvas(source);
+
+    spdlog::trace("Renderer::set_canvas() end");
 }
 
 glm::ivec2 Renderer::draw_box(

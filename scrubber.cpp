@@ -12,19 +12,9 @@
 Scrubber::Scrubber() = default;
 
 Scrubber::Scrubber(const glm::ivec2& location, const glm::ivec2& size)
-    : _location(location),
-      _size(size)
 {
-}
-
-void Scrubber::set_location(const glm::ivec2& location)
-{
-    _location = location;
-}
-
-void Scrubber::set_size(const glm::ivec2& size)
-{
-    _size = size;
+    set_location(location);
+    set_size(size);
 }
 
 void Scrubber::set_progress(float progress_01)

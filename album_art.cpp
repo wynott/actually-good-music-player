@@ -315,34 +315,14 @@ bool load_mp3_embedded_art(const char* path, std::vector<unsigned char>& image_d
 AlbumArt::AlbumArt() = default;
 
 AlbumArt::AlbumArt(const glm::ivec2& location, const glm::ivec2& size)
-    : _location(location),
-      _size(size)
 {
+    set_location(location);
+    set_size(size);
 }
 
 AlbumArt::~AlbumArt()
 {
     wait_for_fetch();
-}
-
-void AlbumArt::set_location(const glm::ivec2& location)
-{
-    _location = location;
-}
-
-void AlbumArt::set_size(const glm::ivec2& size)
-{
-    _size = size;
-}
-
-const glm::ivec2& AlbumArt::get_location() const
-{
-    return _location;
-}
-
-const glm::ivec2& AlbumArt::get_size() const
-{
-    return _size;
 }
 
 bool AlbumArt::load(const std::vector<unsigned char>& image_data)

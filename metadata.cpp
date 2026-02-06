@@ -242,19 +242,9 @@ bool read_track_metadata(const std::string& path, track_metadata& metadata)
 MetadataPanel::MetadataPanel() = default;
 
 MetadataPanel::MetadataPanel(const glm::ivec2& location, const glm::ivec2& size)
-    : _location(location),
-      _size(size)
 {
-}
-
-void MetadataPanel::set_location(const glm::ivec2& location)
-{
-    _location = location;
-}
-
-void MetadataPanel::set_size(const glm::ivec2& size)
-{
-    _size = size;
+    set_location(location);
+    set_size(size);
 }
 
 void MetadataPanel::draw(const app_config& config, const track_metadata& meta)
