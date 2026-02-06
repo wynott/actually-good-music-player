@@ -214,6 +214,51 @@ void Scrubber::draw(const app_config& config) const
         waveform = _waveform;
     }
 
+    auto compute_fill_ratio = [&](float exponent)
+    {
+        if (waveform.empty() || inner_width <= 0 || inner_height <= 0)
+        {
+            return 0.0f;
+        }
+
+        double filled = 0.0;
+        double total = static_cast<double>(inner_width) * static_cast<double>(inner_height);
+        for (int x = 0; x < inner_width; ++x)
+        {
+            float amplitude = 0.0f;
+            size_t index = static_cast<size_t>(
+                std::round(static_cast<float>(x) / static_cast<float>(inner_width - 1) * static_cast<float>(waveform.size() - 1)));
+            if (index < waveform.size())
+            {
+                amplitude = waveform[index];
+            }
+
+            float shaped = std::pow(std::clamp(amplitude, 0.0f, 1.0f), exponent);
+            int bar_height = std::max(1, static_cast<int>(std::round(shaped * static_cast<float>(inner_height))));
+            filled += static_cast<double>(bar_height);
+        }
+
+        return static_cast<float>(filled / total);
+    };
+
+    float low_exp = 0.2f;
+    float high_exp = 50.0f;
+    float target_ratio = 0.5f;
+    float exponent = 22.0f;
+    for (int i = 0; i < 10; ++i)
+    {
+        float ratio = compute_fill_ratio(exponent);
+        if (ratio > target_ratio)
+        {
+            low_exp = exponent;
+        }
+        else
+        {
+            high_exp = exponent;
+        }
+        exponent = 0.5f * (low_exp + high_exp);
+    }
+
     for (int x = 0; x < inner_width; ++x)
     {
         float amplitude = 0.0f;
@@ -227,7 +272,7 @@ void Scrubber::draw(const app_config& config) const
             }
         }
 
-        float shaped = std::pow(std::clamp(amplitude, 0.0f, 1.0f), 22.0f);
+        float shaped = std::pow(std::clamp(amplitude, 0.0f, 1.0f), exponent);
         int bar_height = std::max(1, static_cast<int>(std::round(shaped * static_cast<float>(inner_height))));
         int column_x = origin_x + x;
         for (int y = 0; y < inner_height; ++y)
