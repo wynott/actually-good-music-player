@@ -191,6 +191,7 @@ void Mp3Item::on_soft_select()
     {
         std::vector<std::unique_ptr<BrowserItem>> items;
         items.push_back(std::make_unique<Mp3PlayNowItem>(right, "Play now", get_path()));
+        items.push_back(std::make_unique<PlayRestItem>(right, "Play now and continue album...", get_path()));
         items.push_back(std::make_unique<QueueItem>(right, "Enqueue", get_path()));
         right->set_custom_contents(std::move(items));
     }
@@ -365,6 +366,75 @@ Mp3PlayNowItem::Mp3PlayNowItem(Browser* owner, const std::string& name, const st
 StopPlayItem::StopPlayItem(Browser* owner, const std::string& name, const std::filesystem::path& path)
     : BrowserItem(owner, name, path)
 {
+}
+
+PlayRestItem::PlayRestItem(Browser* owner, const std::string& name, const std::filesystem::path& path)
+    : BrowserItem(owner, name, path)
+{
+}
+
+void PlayRestItem::on_soft_select()
+{
+}
+
+void PlayRestItem::on_select()
+{
+    EventBus::instance().publish(Event{
+        "queue.play_rest",
+        get_path().string()
+    });
+}
+
+glm::ivec2 PlayRestItem::get_size() const
+{
+    return glm::ivec2(static_cast<int>(get_name().size()), 1);
+}
+
+void PlayRestItem::draw(const glm::ivec2& location, const glm::ivec2& size) const
+{
+    auto renderer = Renderer::get();
+    if (!renderer)
+    {
+        return;
+    }
+
+    int width = size.x;
+    int height = size.y;
+    if (width <= 0 || height <= 0)
+    {
+        return;
+    }
+
+    const app_config& config = ActuallyGoodMP::instance().get_config();
+    glm::vec4 normal_fg = config.browser_normal_fg;
+
+    std::string line = get_name();
+    if (static_cast<int>(line.size()) > width)
+    {
+        line.resize(static_cast<size_t>(width));
+    }
+
+    if (static_cast<int>(line.size()) < width)
+    {
+        line.append(static_cast<size_t>(width - line.size()), ' ');
+    }
+
+    renderer->draw_string_coloured(line, location, normal_fg, glm::vec4(0.0f));
+
+    if (height > 1)
+    {
+        renderer->clear_box(
+            glm::ivec2(location.x, location.y + 1),
+            glm::ivec2(width, height - 1));
+    }
+}
+
+void PlayRestItem::scan_and_populate(
+    const std::filesystem::path&,
+    Browser*,
+    std::vector<std::unique_ptr<BrowserItem>>& out) const
+{
+    (void)out;
 }
 
 void StopPlayItem::on_soft_select()

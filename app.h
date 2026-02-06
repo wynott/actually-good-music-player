@@ -50,6 +50,7 @@ private:
     int _album_art_subscription = 0;
     int _queue_subscription = 0;
     int _stop_play_subscription = 0;
+    int _play_rest_subscription = 0;
     Canvas _canvas;
     Rice _rice;
     Queue _queue;

@@ -158,6 +158,54 @@ void ActuallyGoodMP::init()
             _player.stop_playback();
         });
 
+    _play_rest_subscription = EventBus::instance().subscribe(
+        "queue.play_rest",
+        [this](const Event& event)
+        {
+            if (event.payload.empty())
+            {
+                return;
+            }
+
+            std::filesystem::path selected(event.payload);
+            std::filesystem::path album_path = selected.parent_path();
+            if (album_path.empty())
+            {
+                return;
+            }
+
+            std::vector<std::filesystem::path> tracks;
+            for (const auto& entry : std::filesystem::directory_iterator(album_path))
+            {
+                if (!entry.is_regular_file())
+                {
+                    continue;
+                }
+                std::filesystem::path path = entry.path();
+                if (path.extension() == ".mp3")
+                {
+                    tracks.push_back(path);
+                }
+            }
+
+            std::sort(tracks.begin(), tracks.end());
+
+            _player.set_current_track(selected.string());
+            _player.stop_playback();
+            _player.start_playback(_player.get_current_track());
+
+            for (auto it = tracks.rbegin(); it != tracks.rend(); ++it)
+            {
+                if (*it == selected)
+                {
+                    continue;
+                }
+                _queue.enqueue_front(*it);
+            }
+
+            _queue.draw(_config);
+        });
+
     init_browsers();
 }
 
@@ -418,6 +466,12 @@ void ActuallyGoodMP::shutdown()
     {
         EventBus::instance().unsubscribe(_stop_play_subscription);
         _stop_play_subscription = 0;
+    }
+
+    if (_play_rest_subscription != 0)
+    {
+        EventBus::instance().unsubscribe(_play_rest_subscription);
+        _play_rest_subscription = 0;
     }
     
     input_shutdown();

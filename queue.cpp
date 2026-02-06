@@ -152,6 +152,26 @@ void Queue::enqueue(const std::filesystem::path& path)
         std::make_unique<QueueEntryItem>(nullptr, name, path));
 }
 
+void Queue::enqueue_front(const std::filesystem::path& path)
+{
+    ensure_stop_item();
+
+    std::string name = path.filename().string();
+    if (name.empty())
+    {
+        name = path.string();
+    }
+    if (name.empty())
+    {
+        return;
+    }
+
+    size_t insert_index = 0;
+    _items.insert(
+        _items.begin() + static_cast<std::ptrdiff_t>(insert_index),
+        std::make_unique<QueueEntryItem>(nullptr, name, path));
+}
+
 bool Queue::pop_next(std::string& out_path)
 {
     ensure_stop_item();

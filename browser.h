@@ -136,6 +136,24 @@ public:
         std::vector<std::unique_ptr<BrowserItem>>& out) const override;
 };
 
+class PlayRestItem : public BrowserItem
+{
+public:
+    PlayRestItem(Browser* owner, const std::string& name, const std::filesystem::path& path);
+    PlayRestItem() = default;
+
+    void on_soft_select() override;
+    void on_select() override;
+    glm::ivec2 get_size() const override;
+    void draw(
+        const glm::ivec2& location,
+        const glm::ivec2& size) const override;
+    void scan_and_populate(
+        const std::filesystem::path& directory,
+        Browser* owner,
+        std::vector<std::unique_ptr<BrowserItem>>& out) const override;
+};
+
 class Browser
 {
 public:
