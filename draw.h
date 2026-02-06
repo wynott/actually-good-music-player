@@ -19,7 +19,7 @@ public:
 
     void set_canvas(const std::vector<Terminal::Character>& source);
 
-    void draw_box(
+    glm::ivec2 draw_box(
         const glm::ivec2& min_corner,
         const glm::ivec2& size,
         const glm::vec4& foreground,

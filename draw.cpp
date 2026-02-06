@@ -44,7 +44,7 @@ void Renderer::set_canvas(const std::vector<Terminal::Character>& source)
     _terminal.set_canvas(source);
 }
 
-void Renderer::draw_box(
+glm::ivec2 Renderer::draw_box(
     const glm::ivec2& min_corner,
     const glm::ivec2& size,
     const glm::vec4& foreground,
@@ -54,13 +54,13 @@ void Renderer::draw_box(
 
     if (size.x <= 0 || size.y <= 0)
     {
-        return;
+        return glm::ivec2(0);
     }
 
     glm::ivec2 terminal_size = _terminal.get_size();
     if (terminal_size.x <= 0 || terminal_size.y <= 0)
     {
-        return;
+        return glm::ivec2(0);
     }
 
     int min_x = std::max(0, min_corner.x);
@@ -70,8 +70,10 @@ void Renderer::draw_box(
 
     if (min_x > max_x || min_y > max_y)
     {
-        return;
+        return glm::ivec2(0);
     }
+
+    glm::ivec2 actual_size(max_x - min_x + 1, max_y - min_y + 1);
 
     auto set_cell = [&](int x, int y, char32_t glyph)
     {
@@ -90,7 +92,7 @@ void Renderer::draw_box(
     if (min_x == max_x && min_y == max_y)
     {
         set_cell(min_x, min_y, U'╭');
-        return;
+        return actual_size;
     }
 
     if (min_y == max_y)
@@ -108,7 +110,7 @@ void Renderer::draw_box(
             }
             set_cell(x, min_y, glyph);
         }
-        return;
+        return actual_size;
     }
 
     if (min_x == max_x)
@@ -126,7 +128,7 @@ void Renderer::draw_box(
             }
             set_cell(min_x, y, glyph);
         }
-        return;
+        return actual_size;
     }
 
     set_cell(min_x, min_y, U'╭');
@@ -145,6 +147,8 @@ void Renderer::draw_box(
         set_cell(min_x, y, U'│');
         set_cell(max_x, y, U'│');
     }
+
+    return actual_size;
 }
 
 void Renderer::draw_string(const std::string& text, const glm::ivec2& location)

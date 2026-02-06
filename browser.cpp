@@ -878,7 +878,7 @@ void Browser::draw() const
         return;
     }
 
-    renderer->draw_box(
+    (void)renderer->draw_box(
         _location,
         _size,
         ActuallyGoodMP::instance().get_config().browser_normal_fg,

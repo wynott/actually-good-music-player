@@ -280,14 +280,18 @@ void MetadataPanel::draw(const app_config& config, const track_metadata& meta)
     int inner_width = std::max(0, _size.x - 2);
     int inner_height = std::max(0, _size.y - 2);
 
+    glm::ivec2 actual_size(0);
     if (auto renderer = Renderer::get())
     {
-        renderer->draw_box(
-        _location,
-        _size,
-        glm::vec4(1.0f),
-        glm::vec4(0.0f));
+        actual_size = renderer->draw_box(
+            _location,
+            _size,
+            glm::vec4(1.0f),
+            glm::vec4(0.0f));
     }
+
+    inner_width = std::max(0, actual_size.x - 2);
+    inner_height = std::max(0, actual_size.y - 2);
 
     int max_lines = std::min(inner_height, static_cast<int>(lines.size()));
     for (int i = 0; i < max_lines; ++i)

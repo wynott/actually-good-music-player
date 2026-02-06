@@ -226,14 +226,14 @@ void Queue::draw(const app_config& config)
     int draw_height = std::min(desired_height, max_height);
     _size.y = draw_height;
 
-    renderer->draw_box(
+    glm::ivec2 actual_size = renderer->draw_box(
         _location,
         _size,
         config.ui_box_fg,
         glm::vec4(0.0f));
 
-    int inner_width = _size.x - 2;
-    int inner_height = _size.y - 2;
+    int inner_width = actual_size.x - 2;
+    int inner_height = actual_size.y - 2;
     if (inner_width <= 0 || inner_height <= 0)
     {
         return;

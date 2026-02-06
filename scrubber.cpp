@@ -193,10 +193,10 @@ void Scrubber::draw(const app_config& config) const
         return;
     }
 
-    renderer->draw_box(_location, draw_size, config.ui_box_fg, glm::vec4(0.0f));
+    glm::ivec2 actual_size = renderer->draw_box(_location, draw_size, config.ui_box_fg, glm::vec4(0.0f));
 
-    int inner_width = draw_size.x - 2;
-    int inner_height = draw_size.y - 2;
+    int inner_width = actual_size.x - 2;
+    int inner_height = actual_size.y - 2;
     if (inner_width <= 0 || inner_height <= 0)
     {
         return;
