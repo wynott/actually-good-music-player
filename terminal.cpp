@@ -66,7 +66,6 @@ void Terminal::init()
     }
 #endif
 
-    _store.canvas = ActuallyGoodMP::instance().get_canvas()->mutate_buffer();
     _store.resize(_size.x, _size.y);
 }
 
@@ -264,9 +263,14 @@ void Terminal::shutdown()
     std::fflush(stdout);
 }
 
-Terminal::BackingStore::BackingStore() = default;
+Terminal::BackingStore::BackingStore()
+    : layers("terminal.layers")
+{
+    layer_order = {"canvas", "buffer", "juice"};
+}
 
 Terminal::BackingStore::BackingStore(int width, int height)
+    : BackingStore()
 {
     resize(width, height);
 }
@@ -276,15 +280,29 @@ void Terminal::BackingStore::resize(int width, int height)
     this->width = std::max(0, width);
     this->height = std::max(0, height);
     size_t count = static_cast<size_t>(this->width * this->height);
-    buffer.assign(count, Character{});
-    if (canvas)
+    for (const auto& name : layer_order)
     {
-        canvas->assign(count, Character{});
+        auto& layer_ref = layers.get_or_emplace(name);
+        layer_ref.assign(count, Character{});
     }
-    this->juice.assign(count, Character{});
     this->pending_frame.assign(count, Character8{});
     this->previous_frame.assign(count, Character8{});
     dirty.assign(count, true);
+}
+
+std::vector<Terminal::Character>& Terminal::BackingStore::layer(const std::string& name)
+{
+    return layers.at(name);
+}
+
+const std::vector<Terminal::Character>& Terminal::BackingStore::layer(const std::string& name) const
+{
+    return layers.at(name);
+}
+
+bool Terminal::BackingStore::has_layer(const std::string& name) const
+{
+    return layers.contains(name);
 }
 
 Terminal::Character::Character()
@@ -464,12 +482,13 @@ glm::vec4 Terminal::get_canvas_sample(const glm::ivec2& location) const
     }
 
     size_t index = get_index(location);
-    if (!_store.canvas || index >= _store.canvas->size())
+    const auto& canvas_layer = _store.layer("canvas");
+    if (index >= canvas_layer.size())
     {
         return glm::vec4(0.0f);
     }
 
-    const Character& cell = (*_store.canvas)[index];
+    const Character& cell = canvas_layer[index];
     return cell.get_background_colour();
 }
 
@@ -481,12 +500,13 @@ void Terminal::set_glyph(char32_t glyph, const glm::ivec2& location)
     }
 
     size_t index = get_index(location);
-    if (index >= _store.buffer.size())
+    auto& buffer_layer = _store.layer("buffer");
+    if (index >= buffer_layer.size())
     {
         return;
     }
 
-    _store.buffer[index].set_glyph(glyph);
+    buffer_layer[index].set_glyph(glyph);
     _store.pending_frame[index].set_particle_id(0u);
     _store.dirty[index] = true;
 }
@@ -499,12 +519,13 @@ void Terminal::set_glyph(const glm::ivec2& location, char32_t glyph, const glm::
     }
 
     size_t index = get_index(location);
-    if (index >= _store.buffer.size())
+    auto& buffer_layer = _store.layer("buffer");
+    if (index >= buffer_layer.size())
     {
         return;
     }
 
-    Terminal::Character& cell = _store.buffer[index];
+    Terminal::Character& cell = buffer_layer[index];
     cell.set_glyph(glyph);
     glm::vec4 fg = normalize_colour(foreground);
     glm::vec4 bg = normalize_colour(background);
@@ -522,12 +543,13 @@ void Terminal::set_particle_glyph(const glm::ivec2& location, char32_t glyph, co
     }
 
     size_t index = get_index(location);
-    if (index >= _store.buffer.size())
+    auto& juice_layer = _store.layer("juice");
+    if (index >= juice_layer.size())
     {
         return;
     }
 
-    Terminal::Character& cell = _store.juice[index];
+    Terminal::Character& cell = juice_layer[index];
     cell.set_glyph(glyph);
     glm::vec4 fg = normalize_colour(foreground);
     glm::vec4 bg = normalize_colour(background);
@@ -545,12 +567,13 @@ void Terminal::clear_cell(const glm::ivec2& location)
     }
 
     size_t index = get_index(location);
-    if (index >= _store.buffer.size())
+    auto& buffer_layer = _store.layer("buffer");
+    if (index >= buffer_layer.size())
     {
         return;
     }
 
-    Terminal::Character& cell = _store.buffer[index];
+    Terminal::Character& cell = buffer_layer[index];
     cell.set_glyph(U' ');
     cell.set_glyph_colour(glm::vec4(0.0f));
     cell.set_background_colour(glm::vec4(0.0f));
@@ -560,16 +583,17 @@ void Terminal::clear_cell(const glm::ivec2& location)
 
 void Terminal::clear_juice()
 {
-    if (_store.juice.empty())
+    auto& juice_layer = _store.layer("juice");
+    if (juice_layer.empty())
     {
         return;
     }
 
-    for (size_t index = 0; index < _store.juice.size(); ++index)
+    for (size_t index = 0; index < juice_layer.size(); ++index)
     {
-        if (!is_empty_glyph(_store.juice[index]))
+        if (!is_empty_glyph(juice_layer[index]))
         {
-            _store.juice[index] = Character{};
+            juice_layer[index] = Character{};
             _store.pending_frame[index].set_particle_id(0u);
             _store.dirty[index] = true;
         }
@@ -578,14 +602,15 @@ void Terminal::clear_juice()
 
 void Terminal::set_canvas(const std::vector<Character>& source)
 {
-    if (!_store.canvas || source.size() != _store.canvas->size())
+    auto& canvas_layer = _store.layer("canvas");
+    if (source.size() != canvas_layer.size())
     {
         return;
     }
 
     for (size_t i = 0; i < source.size(); ++i)
     {
-        (*_store.canvas)[i] = source[i];
+        canvas_layer[i] = source[i];
         _store.dirty[i] = true;
     }
 }
@@ -612,11 +637,12 @@ void Terminal::select_region(const glm::ivec2& location, const glm::ivec2& size)
         for (int x = min_x; x <= max_x; ++x)
         {
             size_t index = get_index(glm::ivec2(x, y));
-            if (index >= _store.buffer.size())
+            auto& buffer_layer = _store.layer("buffer");
+            if (index >= buffer_layer.size())
             {
                 continue;
             }
-            _store.buffer[index].set_background_colour(highlight);
+            buffer_layer[index].set_background_colour(highlight);
             _store.dirty[index] = true;
         }
     }
@@ -644,11 +670,12 @@ void Terminal::deselect_region(const glm::ivec2& location, const glm::ivec2& siz
         for (int x = min_x; x <= max_x; ++x)
         {
             size_t index = get_index(glm::ivec2(x, y));
-            if (index >= _store.buffer.size())
+            auto& buffer_layer = _store.layer("buffer");
+            if (index >= buffer_layer.size())
             {
                 continue;
             }
-            _store.buffer[index].set_background_colour(clear_bg);
+            buffer_layer[index].set_background_colour(clear_bg);
             _store.dirty[index] = true;
         }
     }
@@ -685,7 +712,7 @@ void Terminal::update()
 
 void Terminal::eightbitify()
 {
-    if (_store.buffer.empty() || _store.dirty.empty())
+    if (_store.layer("buffer").empty() || _store.dirty.empty())
     {
         return;
     }
@@ -697,21 +724,20 @@ void Terminal::eightbitify()
         return static_cast<uint8_t>(value * 255.0f + 0.5f);
     };
 
-    for (size_t index = 0; index < _store.buffer.size(); ++index)
+    auto& buffer_layer = _store.layer("buffer");
+    auto& juice_layer = _store.layer("juice");
+    const auto& canvas_layer = _store.layer("canvas");
+    for (size_t index = 0; index < buffer_layer.size(); ++index)
     {
         if (!_store.dirty[index])
         {
             continue;
         }
 
-        const Character& buffer_cell = _store.buffer[index];
-        const Character& juice_cell = _store.juice[index];
+        const Character& buffer_cell = buffer_layer[index];
+        const Character& juice_cell = juice_layer[index];
         const Character* desired = &buffer_cell;
-        const Character* canvas_cell = nullptr;
-        if (_store.canvas)
-        {
-            canvas_cell = &(*_store.canvas)[index];
-        }
+        const Character* canvas_cell = &canvas_layer[index];
 
         if (is_empty_glyph(buffer_cell) && canvas_cell)
         {

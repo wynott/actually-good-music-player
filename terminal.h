@@ -10,6 +10,8 @@
 #include <glm/vec4.hpp>
 #include <glm/ext/vector_uint3_sized.hpp>
 
+#include "map.h"
+
 class Terminal
 {
 public:
@@ -65,11 +67,13 @@ public:
         BackingStore();
         BackingStore(int width, int height);
         void resize(int width, int height);
+        std::vector<Character>& layer(const std::string& name);
+        const std::vector<Character>& layer(const std::string& name) const;
+        bool has_layer(const std::string& name) const;
         int width = 0;
         int height = 0;
-        std::vector<Character> buffer;
-        std::vector<Character>* canvas = nullptr;
-        std::vector<Character> juice;
+        wynott::map<std::string, std::vector<Character>> layers;
+        std::vector<std::string> layer_order;
         std::vector<Character8> pending_frame;
         std::vector<Character8> previous_frame;
         std::vector<bool> dirty;
