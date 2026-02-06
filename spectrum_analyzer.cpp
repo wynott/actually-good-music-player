@@ -7,6 +7,7 @@
 
 #include "app.h"
 #include "draw.h"
+#include "event.h"
 
 static constexpr float kPi = 3.14159265358979323846f;
 
@@ -311,6 +312,20 @@ void SpectrumAnalyzer::draw()
         {
             full_cells = height;
             remainder = 0.0f;
+        }
+
+        if (clamped >= 0.995f && height > 0)
+        {
+            int top_y = (remainder > 0.0f) ? full_cells : (full_cells - 1);
+            if (top_y < 0)
+            {
+                top_y = 0;
+            }
+            int emit_y = max_y - top_y;
+            int emit_x = min_x + x;
+            EventBus::instance().publish(Event{
+                "debug.particle_emit",
+                std::to_string(emit_x) + "," + std::to_string(emit_y)});
         }
 
         glm::vec4 low = config.spectrum_colour_low;

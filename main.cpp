@@ -5,7 +5,7 @@
 
 int main()
 {
-    init_logging(spdlog::level::trace);
+    init_logging(spdlog::level::info);
 
     auto& app = ActuallyGoodMP::instance();
     app.init();

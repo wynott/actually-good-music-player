@@ -37,6 +37,8 @@ project "agmp"
         "main.cpp",
         "metadata.cpp",
         "metadata.h",
+        "particles.cpp",
+        "particles.h",
         "state.cpp",
         "state.h",
         "net.cpp",

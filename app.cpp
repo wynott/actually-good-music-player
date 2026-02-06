@@ -217,6 +217,7 @@ void ActuallyGoodMP::init()
             _queue.draw(_config);
         });
 
+
     init_browsers();
 }
 
@@ -380,6 +381,9 @@ void ActuallyGoodMP::run()
         analyzer.update();
         analyzer.draw();
 
+        _particles.update(static_cast<float>(delta_time));
+        _particles.draw(_config);
+
         glm::ivec2 term_size = _terminal.get_size();
         int fps_value = static_cast<int>(smoothed_fps + 0.5);
         std::string fps_text = std::to_string(fps_value) + " fps";
@@ -496,6 +500,7 @@ void ActuallyGoodMP::shutdown()
         EventBus::instance().unsubscribe(_play_rest_subscription);
         _play_rest_subscription = 0;
     }
+
     
     input_shutdown();
     http_cleanup();

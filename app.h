@@ -9,6 +9,7 @@
 #include "rice.h"
 #include "scrubber.h"
 #include "terminal.h"
+#include "particles.h"
 
 class ActuallyGoodMP
 {
@@ -56,5 +57,6 @@ private:
     Rice _rice;
     Queue _queue;
     Scrubber _scrubber;
+    ParticleSystem _particles;
 
 };
