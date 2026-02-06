@@ -227,15 +227,29 @@ void Scrubber::draw(const app_config& config) const
             }
         }
 
-        int bar_height = std::max(1, static_cast<int>(std::round(amplitude * static_cast<float>(inner_height))));
+        float shaped = std::pow(std::clamp(amplitude, 0.0f, 1.0f), 22.0f);
+        int bar_height = std::max(1, static_cast<int>(std::round(shaped * static_cast<float>(inner_height))));
         int column_x = origin_x + x;
         for (int y = 0; y < inner_height; ++y)
         {
             int row_y = origin_y + (inner_height - 1 - y);
-            char32_t glyph = (y < bar_height) ? '#' : ' ';
-            glm::vec4 fg = config.ui_text_fg;
+            float t = (inner_height > 1) ? static_cast<float>(y) / static_cast<float>(inner_height - 1) : 0.0f;
+            glm::vec4 low = config.scrubber_colour_low;
+            glm::vec4 high = config.scrubber_colour_high;
+            glm::vec4 fg = low + (high - low) * t;
             glm::vec4 bg(0.0f);
-            renderer->draw_glyph(glm::ivec2(column_x, row_y), glyph, fg, bg);
+            if (y < bar_height)
+            {
+                renderer->draw_glyph(glm::ivec2(column_x, row_y), U'█', fg, bg);
+            }
+            else
+            {
+                renderer->draw_glyph(
+                    glm::ivec2(column_x, row_y),
+                    U' ',
+                    glm::vec4(0.0f),
+                    glm::vec4(0.0f));
+            }
         }
     }
 
@@ -244,8 +258,8 @@ void Scrubber::draw(const app_config& config) const
         int row_y = origin_y + y;
         renderer->draw_glyph(
             glm::ivec2(progress_x, row_y),
-            '|',
-            config.browser_selected_fg,
+            U'│',
+            glm::vec4(1.0f, 0.0f, 0.0f, 1.0f),
             glm::vec4(0.0f));
     }
 }

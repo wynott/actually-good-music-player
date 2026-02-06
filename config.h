@@ -43,6 +43,10 @@ struct app_config
     glm::vec4 grid_background_bl;
     glm::vec4 grid_background_br;
     glm::vec4 grid_line_colour;
+    glm::vec4 spectrum_colour_low;
+    glm::vec4 spectrum_colour_high;
+    glm::vec4 scrubber_colour_low;
+    glm::vec4 scrubber_colour_high;
     int metadata_max_width;
     int metadata_origin_x;
     int metadata_origin_y;

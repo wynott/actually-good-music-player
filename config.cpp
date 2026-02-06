@@ -135,6 +135,10 @@ app_config load_config(const std::string& path)
     config.grid_background_bl = glm::vec4(0.090f, 0.094f, 0.114f, 1.0f);
     config.grid_background_br = glm::vec4(0.173f, 0.204f, 0.227f, 1.0f);
     config.grid_line_colour = glm::vec4(0.490f, 0.490f, 0.490f, 1.0f);
+    config.spectrum_colour_low = glm::vec4(0.251f, 0.502f, 1.0f, 1.0f);
+    config.spectrum_colour_high = glm::vec4(1.0f, 0.376f, 0.251f, 1.0f);
+    config.scrubber_colour_low = config.spectrum_colour_low;
+    config.scrubber_colour_high = config.spectrum_colour_high;
     config.metadata_max_width = 48;
     config.metadata_origin_x = config.art_width_chars + 2;
     config.metadata_origin_y = 3;
@@ -445,6 +449,22 @@ app_config load_config(const std::string& path)
         else if (key == "grid_line_colour")
         {
             config.grid_line_colour = parse_color(value, config.grid_line_colour);
+        }
+        else if (key == "spectrum_colour_low")
+        {
+            config.spectrum_colour_low = parse_color(value, config.spectrum_colour_low);
+        }
+        else if (key == "spectrum_colour_high")
+        {
+            config.spectrum_colour_high = parse_color(value, config.spectrum_colour_high);
+        }
+        else if (key == "scrubber_colour_low")
+        {
+            config.scrubber_colour_low = parse_color(value, config.scrubber_colour_low);
+        }
+        else if (key == "scrubber_colour_high")
+        {
+            config.scrubber_colour_high = parse_color(value, config.scrubber_colour_high);
         }
         else if (key == "metadata_max_width")
         {

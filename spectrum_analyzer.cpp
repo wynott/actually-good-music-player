@@ -310,37 +310,24 @@ void SpectrumAnalyzer::draw()
             bar_height = height;
         }
 
-        float t = (width > 1) ? static_cast<float>(x) / static_cast<float>(width - 1) : 0.0f;
-        glm::vec4 band_colour = bar_colour;
-        if (t < 0.5f)
-        {
-            float u = t / 0.5f;
-            band_colour = glm::vec4(
-                0.251f + (1.0f - 0.251f) * u,
-                0.502f + (1.0f - 0.502f) * u,
-                1.0f,
-                1.0f);
-        }
-        else
-        {
-            float u = (t - 0.5f) / 0.5f;
-            band_colour = glm::vec4(
-                1.0f,
-                1.0f - (1.0f - 0.376f) * u,
-                1.0f - (1.0f - 0.251f) * u,
-                1.0f);
-        }
+        glm::vec4 low = config.spectrum_colour_low;
+        glm::vec4 high = config.spectrum_colour_high;
 
         int draw_x = min_x + x;
-        for (int y = 0; y < bar_height; ++y)
+        for (int y = 0; y < height; ++y)
         {
             int draw_y = max_y - y;
             glm::ivec2 cell_location(draw_x, draw_y);
-            renderer->draw_glyph(
-                cell_location,
-                U'█',
-                band_colour,
-                glm::vec4(0.0f));
+            if (y < bar_height)
+            {
+                float t = (height > 1) ? static_cast<float>(y) / static_cast<float>(height - 1) : 0.0f;
+                glm::vec4 band_colour = low + (high - low) * t;
+                renderer->draw_glyph(
+                    cell_location,
+                    U'█',
+                    band_colour,
+                    glm::vec4(0.0f));
+            }
         }
     }
     
