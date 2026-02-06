@@ -499,12 +499,18 @@ bool AlbumArt::load_image_data(const std::vector<unsigned char>& image_data)
     int out_h = std::max(1, _size.y);
     _pixels.assign(static_cast<size_t>(out_w * out_h), Terminal::Character{});
 
+    int sample_h = std::max(1, out_h * 2);
     for (int y = 0; y < out_h; ++y)
     {
-        int src_y = static_cast<int>((static_cast<float>(y) / static_cast<float>(out_h)) * height);
-        if (src_y >= height)
+        int src_y_top = static_cast<int>((static_cast<float>(y * 2) / static_cast<float>(sample_h)) * height);
+        int src_y_bottom = static_cast<int>((static_cast<float>(y * 2 + 1) / static_cast<float>(sample_h)) * height);
+        if (src_y_top >= height)
         {
-            src_y = height - 1;
+            src_y_top = height - 1;
+        }
+        if (src_y_bottom >= height)
+        {
+            src_y_bottom = height - 1;
         }
 
         for (int x = 0; x < out_w; ++x)
@@ -515,18 +521,26 @@ bool AlbumArt::load_image_data(const std::vector<unsigned char>& image_data)
                 src_x = width - 1;
             }
 
-            size_t src_index = static_cast<size_t>((src_y * width + src_x) * 4);
-            int r = pixels[src_index + 0];
-            int g = pixels[src_index + 1];
-            int b = pixels[src_index + 2];
+            size_t src_index_top = static_cast<size_t>((src_y_top * width + src_x) * 4);
+            size_t src_index_bottom = static_cast<size_t>((src_y_bottom * width + src_x) * 4);
             float inv = 1.0f / 255.0f;
+
+            glm::vec4 top_colour(
+                pixels[src_index_top + 0] * inv,
+                pixels[src_index_top + 1] * inv,
+                pixels[src_index_top + 2] * inv,
+                1.0f);
+            glm::vec4 bottom_colour(
+                pixels[src_index_bottom + 0] * inv,
+                pixels[src_index_bottom + 1] * inv,
+                pixels[src_index_bottom + 2] * inv,
+                1.0f);
 
             size_t dst_index = static_cast<size_t>(y * out_w + x);
             Terminal::Character& cell = _pixels[dst_index];
-            cell.set_glyph(U'█');
-            glm::vec4 colour(r * inv, g * inv, b * inv, 1.0f);
-            cell.set_glyph_colour(colour);
-            cell.set_background_colour(colour);
+            cell.set_glyph(U'▄');
+            cell.set_glyph_colour(bottom_colour);
+            cell.set_background_colour(top_colour);
         }
     }
 
