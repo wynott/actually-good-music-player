@@ -23,7 +23,7 @@ rice_art = """
 rice_draw_art = true
 
 # --- Grid canvas ---
-draw_grid_canvas = false
+draw_grid_canvas = true
 grid_spacing_x = 6
 grid_spacing_y = 3
 grid_label_every = 2
@@ -71,7 +71,7 @@ art_height_chars = 20
 # --- Metadata panel layout ---
 # Max characters for metadata lines before truncation.
 metadata_max_width = 32
-metadata_origin_x = 100
+metadata_origin_x = 120
 metadata_origin_y = 3
 metadata_width = 34
 metadata_height = 12
@@ -83,8 +83,8 @@ spectrum_width = 70
 spectrum_height = 20
 
 # --- Queue layout ---
-queue_origin_x = 100
-queue_origin_y = 25
+queue_origin_x = 150
+queue_origin_y = 2
 queue_width = 34
 queue_height = 8
 
@@ -108,7 +108,7 @@ ui_text_fg = "0.941, 0.941, 0.941"
 # --- Spectrum + scrubber colors (RGB 0..1) ---
 spectrum_colour_low = "0.251, 0.502, 1.000"
 spectrum_colour_high = "1.000, 0.376, 0.251"
-spectrum_particle_threshold = 0.5
+spectrum_particle_threshold = 0.9
 spectrum_juice_multiplier = 1
 scrubber_colour_low = "0.251, 0.502, 1.000"
 scrubber_colour_high = "1.000, 0.376, 0.251"

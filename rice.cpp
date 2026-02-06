@@ -19,6 +19,6 @@ void Rice::run(const app_config& config)
 
     Canvas* canvas = ActuallyGoodMP::instance().get_canvas();
     canvas->resize(renderer->get_terminal_size());
-    canvas->build_default(config);
-    renderer->set_layer("rice", canvas->get_buffer());
+    canvas->build_logo(config);
+    renderer->set_layer("logo", canvas->get_buffer());
 }

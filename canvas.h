@@ -30,6 +30,7 @@ public:
     void build_default(const app_config& config);
     void build_from_album(const app_config& config, const AlbumArt& album_art);
     void build_grid(const app_config& config);
+    void build_logo(const app_config& config);
 
 private:
     void draw_art(const std::vector<std::string>& lines, const glm::vec4& colour);

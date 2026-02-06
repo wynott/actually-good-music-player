@@ -231,22 +231,22 @@ void Canvas::build_grid(const app_config& config)
 
     for (int y = 0; y < _size.y; ++y)
     {
-        int from_bottom = (_size.y - 1) - y;
-        if (from_bottom % spacing_y != 0)
+        int label_value = y;
+        if (label_value % spacing_y != 0)
         {
             continue;
         }
-        int line_index = from_bottom / spacing_y;
+        int line_index = label_value / spacing_y;
         if (line_index % label_every != 0)
         {
             continue;
         }
-        std::string label = std::to_string(from_bottom);
+        std::string label = std::to_string(label_value);
         write_label(left_x, y, label);
         write_label(std::max(0, right_x - static_cast<int>(label.size()) + 1), y, label);
     }
 
-    write_label(left_x, top_y, std::to_string(std::max(0, _size.y - 1)));
+    write_label(left_x, top_y, std::to_string(0));
 
     if (config.rice_draw_art)
     {
@@ -259,6 +259,20 @@ void Canvas::build_grid(const app_config& config)
     }
 
     spdlog::trace("Canvas::build_grid() end");
+}
+
+void Canvas::build_logo(const app_config& config)
+{
+    fill(glm::vec4(0.0f));
+    if (config.rice_draw_art)
+    {
+        std::vector<std::string> lines = config.rice_art;
+        if (lines.empty())
+        {
+            lines.push_back("AGMP");
+        }
+        draw_art(lines, config.rice_colour);
+    }
 }
 
 static bool decode_utf8(const std::string& text, size_t& index, char32_t& out)

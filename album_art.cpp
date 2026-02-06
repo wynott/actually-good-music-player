@@ -385,6 +385,10 @@ void AlbumArt::set_track(
                     std::lock_guard<std::mutex> lock(_mutex);
                     _result = std::move(local);
                 }
+                if (_result.ready && _result.has_art && !_result.online_failed)
+                {
+                    EventBus::instance().publish(Event{"album_art.online_updated", _current_track});
+                }
                 _dirty.store(true, std::memory_order_release);
                 EventBus::instance().publish(Event{"album_art.updated", _current_track});
             }

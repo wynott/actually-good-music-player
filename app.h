@@ -49,6 +49,7 @@ private:
     Terminal _terminal;
     int _mp3_selected_subscription = 0;
     int _album_art_subscription = 0;
+    int _album_art_online_subscription = 0;
     int _track_changed_subscription = 0;
     int _queue_subscription = 0;
     int _stop_play_subscription = 0;

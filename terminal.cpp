@@ -266,7 +266,7 @@ void Terminal::shutdown()
 Terminal::BackingStore::BackingStore()
     : layers("terminal.layers")
 {
-    layer_order = {"canvas", "rice", "buffer", "juice"};
+    layer_order = {"wallpaper", "logo", "buffer", "juice"};
 }
 
 Terminal::BackingStore::BackingStore(int width, int height)
@@ -482,7 +482,7 @@ glm::vec4 Terminal::get_canvas_sample(const glm::ivec2& location) const
     }
 
     size_t index = get_index(location);
-    const auto& canvas_layer = _store.layer("canvas");
+    const auto& canvas_layer = _store.layer("wallpaper");
     if (index >= canvas_layer.size())
     {
         return glm::vec4(0.0f);
@@ -602,7 +602,7 @@ void Terminal::clear_juice()
 
 void Terminal::set_canvas(const std::vector<Character>& source)
 {
-    set_layer("canvas", source);
+    set_layer("wallpaper", source);
 }
 
 void Terminal::set_layer(const std::string& name, const std::vector<Character>& source)
@@ -736,8 +736,8 @@ void Terminal::eightbitify()
 
     auto& buffer_layer = _store.layer("buffer");
     auto& juice_layer = _store.layer("juice");
-    const auto& canvas_layer = _store.layer("canvas");
-    const auto& rice_layer = _store.layer("rice");
+    const auto& wallpaper_layer = _store.layer("wallpaper");
+    const auto& logo_layer = _store.layer("logo");
     for (size_t index = 0; index < buffer_layer.size(); ++index)
     {
         if (!_store.dirty[index])
@@ -747,14 +747,20 @@ void Terminal::eightbitify()
 
         const Character& buffer_cell = buffer_layer[index];
         const Character& juice_cell = juice_layer[index];
-        const Character& rice_cell = rice_layer[index];
-        const Character* canvas_cell = &canvas_layer[index];
-        const Character* underlay = !is_empty_glyph(rice_cell) ? &rice_cell : canvas_cell;
+        const Character& logo_cell = logo_layer[index];
+        const Character* wallpaper_cell = &wallpaper_layer[index];
         const Character* desired = &buffer_cell;
 
         if (is_empty_glyph(buffer_cell))
         {
-            desired = underlay;
+            if (!is_empty_glyph(logo_cell))
+            {
+                desired = &logo_cell;
+            }
+            else
+            {
+                desired = wallpaper_cell;
+            }
         }
 
         const Character* overlay = nullptr;
@@ -767,9 +773,14 @@ void Terminal::eightbitify()
         glm::vec4 fg = desired->get_glyph_colour();
         glm::vec4 bg = desired->get_background_colour();
 
-        if (underlay && desired == &buffer_cell && bg.w < 1.0f)
+        if (desired == &logo_cell)
         {
-            glm::vec4 canvas_bg = underlay->get_background_colour();
+            bg = wallpaper_cell->get_background_colour();
+        }
+
+        if (desired == &buffer_cell && bg.w < 1.0f)
+        {
+            glm::vec4 canvas_bg = wallpaper_cell->get_background_colour();
             float inv = 1.0f - bg.w;
             bg = glm::vec4(
                 bg.r * bg.w + canvas_bg.r * inv,

@@ -130,6 +130,18 @@ void ActuallyGoodMP::init()
             update_canvas_from_album();
         });
 
+    _album_art_online_subscription = EventBus::instance().subscribe(
+        "album_art.online_updated",
+        [this](const Event&)
+        {
+            _album_art.refresh(_config, 0, 0);
+            update_canvas_from_album();
+            if (auto renderer = Renderer::get())
+            {
+                renderer->set_layer("wallpaper", _canvas.get_buffer());
+            }
+        });
+
     _track_changed_subscription = EventBus::instance().subscribe(
         "player.track_changed",
         [this](const Event& event)
@@ -488,6 +500,12 @@ void ActuallyGoodMP::shutdown()
         _album_art_subscription = 0;
     }
 
+    if (_album_art_online_subscription != 0)
+    {
+        EventBus::instance().unsubscribe(_album_art_online_subscription);
+        _album_art_online_subscription = 0;
+    }
+
     if (_track_changed_subscription != 0)
     {
         EventBus::instance().unsubscribe(_track_changed_subscription);
@@ -535,7 +553,7 @@ void ActuallyGoodMP::update_canvas_from_album()
     {
         _canvas.build_from_album(_config, _album_art);
     }
-    renderer->set_canvas(_canvas.get_buffer());
+    renderer->set_layer("wallpaper", _canvas.get_buffer());
 }
 
 void ActuallyGoodMP::init_browsers()
