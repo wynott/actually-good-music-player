@@ -320,6 +320,15 @@ void Renderer::draw_glyph(
     _terminal.set_glyph(location, glyph, foreground, background);
 }
 
+void Renderer::set_layer(const std::string& name, const std::vector<Terminal::Character>& source)
+{
+    spdlog::trace("Renderer::set_layer() begin");
+
+    _terminal.set_layer(name, source);
+
+    spdlog::trace("Renderer::set_layer() end");
+}
+
 void Renderer::draw_particle_glyph(
     const glm::ivec2& location,
     char32_t glyph,

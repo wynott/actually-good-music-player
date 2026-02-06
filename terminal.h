@@ -101,6 +101,7 @@ public:
     void set_particle_glyph(const glm::ivec2& location, char32_t glyph, const glm::vec4& foreground, const glm::vec4& background, uint32_t particle_id);
     void clear_cell(const glm::ivec2& location);
     void set_canvas(const std::vector<Character>& source);
+    void set_layer(const std::string& name, const std::vector<Character>& source);
     void clear_juice();
     void select_region(const glm::ivec2& location, const glm::ivec2& size);
     void deselect_region(const glm::ivec2& location, const glm::ivec2& size);

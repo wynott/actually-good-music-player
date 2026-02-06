@@ -89,10 +89,10 @@ queue_width = 34
 queue_height = 8
 
 # --- Scrubber layout ---
-scrubber_origin_x = 100
-scrubber_origin_y = 34
-scrubber_width = 102
-scrubber_height = 35
+scrubber_origin_x = 0
+scrubber_origin_y = 10
+scrubber_width = 1000
+scrubber_height = 10
 
 # --- Browser colors (RGB 0..1) ---
 browser_normal_fg = "0.941, 0.941, 0.941"
