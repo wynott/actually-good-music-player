@@ -27,6 +27,12 @@ public:
 
     virtual void on_soft_select() = 0;
     virtual void on_select() = 0;
+    virtual glm::ivec2 get_size() const = 0;
+    virtual void draw(
+        const glm::ivec2& location,
+        const glm::ivec2& size,
+        bool selected,
+        bool focused) const = 0;
     virtual void scan_and_populate(
         const std::filesystem::path& directory,
         Browser* owner,
@@ -50,6 +56,12 @@ public:
 
     void on_soft_select() override;
     void on_select() override;
+    glm::ivec2 get_size() const override;
+    void draw(
+        const glm::ivec2& location,
+        const glm::ivec2& size,
+        bool selected,
+        bool focused) const override;
     void scan_and_populate(
         const std::filesystem::path& directory,
         Browser* owner,
@@ -64,6 +76,12 @@ public:
 
     void on_soft_select() override;
     void on_select() override;
+    glm::ivec2 get_size() const override;
+    void draw(
+        const glm::ivec2& location,
+        const glm::ivec2& size,
+        bool selected,
+        bool focused) const override;
     void scan_and_populate(
         const std::filesystem::path& directory,
         Browser* owner,

@@ -13,6 +13,66 @@
 #include "player.h"
 #include "spdlog/spdlog.h"
 
+static void draw_item_line(
+    const std::string& name,
+    const glm::ivec2& location,
+    const glm::ivec2& size,
+    bool selected,
+    bool focused)
+{
+    auto renderer = Renderer::get();
+    if (!renderer)
+    {
+        return;
+    }
+
+    int width = size.x;
+    if (width <= 0)
+    {
+        return;
+    }
+
+    const app_config& config = ActuallyGoodMP::instance().get_config();
+    glm::vec4 normal_fg = config.browser_normal_fg;
+    glm::vec4 selected_fg = config.browser_selected_fg;
+    glm::vec4 selected_bg = config.browser_selected_bg;
+    glm::vec4 unfocused_selected_fg = config.browser_inactive_bg;
+
+    std::string line = name;
+    int max_name = std::max(0, width - 1);
+    if (static_cast<int>(line.size()) > max_name)
+    {
+        line.resize(static_cast<size_t>(max_name));
+    }
+
+    if (selected)
+    {
+        line.insert(line.begin(), '>');
+    }
+    else
+    {
+        line.insert(line.begin(), ' ');
+    }
+
+    if (static_cast<int>(line.size()) < width)
+    {
+        line.append(static_cast<size_t>(width - line.size()), ' ');
+    }
+
+    if (selected && focused)
+    {
+        renderer->draw_string_coloured(line, location, selected_fg, selected_bg);
+    }
+    else if (selected)
+    {
+        renderer->draw_string_canvas_bg(line, location, unfocused_selected_fg);
+    }
+    else
+    {
+        renderer->draw_string_canvas_bg(line, location, normal_fg);
+    }
+}
+
 Browser::Browser() = default;
 
 Browser::Browser(
@@ -91,6 +151,20 @@ void FolderItem::on_soft_select()
     right->draw();
 }
 
+glm::ivec2 FolderItem::get_size() const
+{
+    return glm::ivec2(static_cast<int>(get_name().size()) + 1, 1);
+}
+
+void FolderItem::draw(
+    const glm::ivec2& location,
+    const glm::ivec2& size,
+    bool selected,
+    bool focused) const
+{
+    draw_item_line(get_name(), location, size, selected, focused);
+}
+
 void FolderItem::scan_and_populate(
     const std::filesystem::path& directory,
     Browser* owner,
@@ -145,6 +219,20 @@ void Mp3Item::on_select()
         "browser.mp3_selected",
         get_path().string()
     });
+}
+
+glm::ivec2 Mp3Item::get_size() const
+{
+    return glm::ivec2(static_cast<int>(get_name().size()) + 1, 1);
+}
+
+void Mp3Item::draw(
+    const glm::ivec2& location,
+    const glm::ivec2& size,
+    bool selected,
+    bool focused) const
+{
+    draw_item_line(get_name(), location, size, selected, focused);
 }
 
 void Mp3Item::scan_and_populate(
@@ -242,13 +330,24 @@ void Browser::resize_to_fit_contents()
     spdlog::trace("Browser::resize_to_fit_contents() begin");
 
     glm::ivec2 previous_size = _size;
-    size_t rows = _contents.size();
-    int required = static_cast<int>(rows + 2);
-    if (required < 3)
+    int rows = 0;
+    int max_width = 1;
+    for (const auto& item : _contents)
     {
-        required = 3;
+        glm::ivec2 item_size = item->get_size();
+        rows += std::max(1, item_size.y);
+        max_width = std::max(max_width, item_size.x);
     }
-    _size.y = required;
+
+    int required_height = rows + 2;
+    if (required_height < 3)
+    {
+        required_height = 3;
+    }
+    _size.y = required_height;
+
+    int required_width = std::max(3, max_width + 2);
+    _size.x = required_width;
 
     auto renderer = Renderer::get();
     if (!renderer)
@@ -263,6 +362,15 @@ void Browser::resize_to_fit_contents()
         if (max_height > 0 && _size.y > max_height)
         {
             _size.y = max_height;
+        }
+    }
+
+    if (terminal_size.x > 0)
+    {
+        int max_width_available = terminal_size.x - 1 - _location.x;
+        if (max_width_available > 0 && _size.x > max_width_available)
+        {
+            _size.x = max_width_available;
         }
     }
 
@@ -535,17 +643,10 @@ void Browser::draw() const
         return;
     }
 
-    const app_config& config = ActuallyGoodMP::instance().get_config();
-
-    glm::vec4 normal_fg = config.browser_normal_fg;
-    glm::vec4 selected_fg = config.browser_selected_fg;
-    glm::vec4 selected_bg = config.browser_selected_bg;
-    glm::vec4 unfocused_selected_fg = config.browser_inactive_bg;
-
     renderer->draw_box(
         _location,
         _size,
-        normal_fg,
+        ActuallyGoodMP::instance().get_config().browser_normal_fg,
         glm::vec4(0.0f));
 
     int inner_width = _size.x - 2;
@@ -577,40 +678,10 @@ void Browser::draw() const
     {
         size_t item_index = start_index + i;
         const BrowserItem& item = *_contents[item_index];
-        std::string line = item.get_name();
-        if (static_cast<int>(line.size()) > inner_width - 2)
-        {
-            line.resize(static_cast<size_t>(inner_width - 2));
-        }
-
-        bool is_selected = (item_index == _selected_index);
-        if (is_selected)
-        {
-            line.insert(line.begin(), '>');
-        }
-        else
-        {
-            line.insert(line.begin(), ' ');
-        }
-
-        if (static_cast<int>(line.size()) < inner_width)
-        {
-            line.append(static_cast<size_t>(inner_width - line.size()), ' ');
-        }
-
         glm::ivec2 row_location(_location.x + 1, list_start_y + static_cast<int>(i));
-        if (is_selected && _is_focused)
-        {
-            renderer->draw_string_coloured(line, row_location, selected_fg, selected_bg);
-        }
-        else if (is_selected)
-        {
-            renderer->draw_string_canvas_bg(line, row_location, unfocused_selected_fg);
-        }
-        else
-        {
-            renderer->draw_string_canvas_bg(line, row_location, normal_fg);
-        }
+        glm::ivec2 row_size(inner_width, 1);
+        bool is_selected = (item_index == _selected_index);
+        item.draw(row_location, row_size, is_selected, _is_focused);
     }
 
     if (has_overflow && available_rows > 0 && inner_width > 0)
