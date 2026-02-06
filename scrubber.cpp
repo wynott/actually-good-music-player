@@ -9,6 +9,29 @@
 #include "draw.h"
 #include "miniaudio.h"
 
+static char32_t partial_block(float frac)
+{
+    if (frac <= 0.0f)
+    {
+        return U' ';
+    }
+    if (frac >= 1.0f)
+    {
+        return U'█';
+    }
+    static const char32_t levels[] = {U'▁', U'▂', U'▃', U'▅', U'▆', U'▇', U'▉', U'█'};
+    int idx = static_cast<int>(std::ceil(frac * 8.0f)) - 1;
+    if (idx < 0)
+    {
+        idx = 0;
+    }
+    if (idx > 7)
+    {
+        idx = 7;
+    }
+    return levels[idx];
+}
+
 Scrubber::Scrubber() = default;
 
 Scrubber::Scrubber(const glm::ivec2& location, const glm::ivec2& size)
@@ -162,12 +185,15 @@ void Scrubber::request_waveform(const std::string& path, int columns)
         return;
     }
 
+    int samples_per_column = std::max(1, _waveform_samples_per_column);
+    int oversampled_columns = std::max(1, columns * samples_per_column);
+
     int job_id = _waveform_job_id.fetch_add(1) + 1;
     std::string path_copy = path;
-    std::thread([this, path_copy, columns, job_id]()
+    std::thread([this, path_copy, oversampled_columns, job_id]()
     {
         float peak = 0.0f;
-        std::vector<float> waveform = build_waveform(path_copy, columns, &peak);
+        std::vector<float> waveform = build_waveform(path_copy, oversampled_columns, &peak);
 
         float gain = 1.0f;
         if (peak > 1.0e-6f)
@@ -291,11 +317,34 @@ void Scrubber::draw(const app_config& config) const
         for (int x = 0; x < inner_width; ++x)
         {
             float amplitude = 0.0f;
-            size_t index = static_cast<size_t>(
-                std::round(static_cast<float>(x) / static_cast<float>(inner_width - 1) * static_cast<float>(waveform.size() - 1)));
-            if (index < waveform.size())
+            if (!waveform.empty())
             {
-                amplitude = waveform[index];
+                int samples_per_column = std::max(1, _waveform_samples_per_column);
+                int start = (x * samples_per_column * static_cast<int>(waveform.size())) / (inner_width * samples_per_column);
+                int end = ((x + 1) * samples_per_column * static_cast<int>(waveform.size())) / (inner_width * samples_per_column);
+                if (end <= start)
+                {
+                    end = start + 1;
+                }
+                if (start < 0)
+                {
+                    start = 0;
+                }
+                if (end > static_cast<int>(waveform.size()))
+                {
+                    end = static_cast<int>(waveform.size());
+                }
+                float sum = 0.0f;
+                int count = 0;
+                for (int i = start; i < end; ++i)
+                {
+                    sum += waveform[static_cast<size_t>(i)];
+                    count += 1;
+                }
+                if (count > 0)
+                {
+                    amplitude = sum / static_cast<float>(count);
+                }
             }
 
             float shaped = std::pow(std::clamp(amplitude, 0.0f, 1.0f), exponent);
@@ -329,11 +378,31 @@ void Scrubber::draw(const app_config& config) const
         float amplitude = 0.0f;
         if (!waveform.empty())
         {
-            size_t index = static_cast<size_t>(
-                std::round(static_cast<float>(x) / static_cast<float>(inner_width - 1) * static_cast<float>(waveform.size() - 1)));
-            if (index < waveform.size())
+            int samples_per_column = std::max(1, _waveform_samples_per_column);
+            int start = (x * samples_per_column * static_cast<int>(waveform.size())) / (inner_width * samples_per_column);
+            int end = ((x + 1) * samples_per_column * static_cast<int>(waveform.size())) / (inner_width * samples_per_column);
+            if (end <= start)
             {
-                amplitude = waveform[index];
+                end = start + 1;
+            }
+            if (start < 0)
+            {
+                start = 0;
+            }
+            if (end > static_cast<int>(waveform.size()))
+            {
+                end = static_cast<int>(waveform.size());
+            }
+            float sum = 0.0f;
+            int count = 0;
+            for (int i = start; i < end; ++i)
+            {
+                sum += waveform[static_cast<size_t>(i)];
+                count += 1;
+            }
+            if (count > 0)
+            {
+                amplitude = sum / static_cast<float>(count);
             }
         }
 
@@ -355,23 +424,6 @@ void Scrubber::draw(const app_config& config) const
             remainder = 0.0f;
         }
         int column_x = origin_x + x;
-        auto partial_block = [](float frac)
-        {
-            if (frac <= 0.0f)
-            {
-                return U' ';
-            }
-            if (frac >= 1.0f)
-            {
-                return U'█';
-            }
-            static const char32_t levels[] = {U'▁', U'▂', U'▃', U'▅', U'▆', U'▇', U'▉', U'█'};
-            int idx = static_cast<int>(std::ceil(frac * 8.0f)) - 1;
-            if (idx < 0) idx = 0;
-            if (idx > 7) idx = 7;
-            return levels[idx];
-        };
-
         for (int y = 0; y < inner_height; ++y)
         {
             int row_y = origin_y + (inner_height - 1 - y);
@@ -385,12 +437,12 @@ void Scrubber::draw(const app_config& config) const
             if (remainder > 0.0f && y == full_cells)
             {
                 char32_t glyph = partial_block(remainder);
-                renderer->draw_glyph(glm::ivec2(column_x, row_y), glyph, fg, bg);
+                renderer->draw_glyph(glm::ivec2(column_x, row_y), glyph, fg, glm::vec4(0.0f));
             }
             else if (remainder <= 0.0f && y == full_cells - 1)
             {
                 char32_t glyph = partial_block(1.0f);
-                renderer->draw_glyph(glm::ivec2(column_x, row_y), glyph, fg, bg);
+                renderer->draw_glyph(glm::ivec2(column_x, row_y), glyph, fg, glm::vec4(0.0f));
             }
             else if (y < full_cells)
             {

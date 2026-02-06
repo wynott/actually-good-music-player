@@ -33,4 +33,5 @@ private:
     mutable std::mutex _waveform_mutex;
     std::atomic<int> _waveform_job_id{0};
     std::atomic<float> _pending_peak_gain{-1.0f};
+    int _waveform_samples_per_column = 8;
 };

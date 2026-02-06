@@ -78,9 +78,9 @@ metadata_height = 12
 
 # --- Spectrum analyzer layout ---
 spectrum_origin_x = 100
-spectrum_origin_y = 16
-spectrum_width = 34
-spectrum_height = 8
+spectrum_origin_y = 30
+spectrum_width = 70
+spectrum_height = 20
 
 # --- Queue layout ---
 queue_origin_x = 100
