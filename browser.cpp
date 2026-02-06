@@ -13,66 +13,6 @@
 #include "player.h"
 #include "spdlog/spdlog.h"
 
-static void draw_item_line(
-    const std::string& name,
-    const glm::ivec2& location,
-    const glm::ivec2& size,
-    bool selected,
-    bool focused)
-{
-    auto renderer = Renderer::get();
-    if (!renderer)
-    {
-        return;
-    }
-
-    int width = size.x;
-    if (width <= 0)
-    {
-        return;
-    }
-
-    const app_config& config = ActuallyGoodMP::instance().get_config();
-    glm::vec4 normal_fg = config.browser_normal_fg;
-    glm::vec4 selected_fg = config.browser_selected_fg;
-    glm::vec4 selected_bg = config.browser_selected_bg;
-    glm::vec4 unfocused_selected_fg = config.browser_inactive_bg;
-
-    std::string line = name;
-    int max_name = std::max(0, width - 1);
-    if (static_cast<int>(line.size()) > max_name)
-    {
-        line.resize(static_cast<size_t>(max_name));
-    }
-
-    if (selected)
-    {
-        line.insert(line.begin(), '>');
-    }
-    else
-    {
-        line.insert(line.begin(), ' ');
-    }
-
-    if (static_cast<int>(line.size()) < width)
-    {
-        line.append(static_cast<size_t>(width - line.size()), ' ');
-    }
-
-    if (selected && focused)
-    {
-        renderer->draw_string_coloured(line, location, selected_fg, selected_bg);
-    }
-    else if (selected)
-    {
-        renderer->draw_string_canvas_bg(line, location, unfocused_selected_fg);
-    }
-    else
-    {
-        renderer->draw_string_canvas_bg(line, location, normal_fg);
-    }
-}
-
 Browser::Browser() = default;
 
 Browser::Browser(
@@ -162,7 +102,70 @@ void FolderItem::draw(
     bool selected,
     bool focused) const
 {
-    draw_item_line(get_name(), location, size, selected, focused);
+    auto renderer = Renderer::get();
+    if (!renderer)
+    {
+        return;
+    }
+
+    int width = size.x;
+    int height = size.y;
+    if (width <= 0 || height <= 0)
+    {
+        return;
+    }
+
+    const app_config& config = ActuallyGoodMP::instance().get_config();
+    glm::vec4 normal_fg = config.browser_normal_fg;
+    glm::vec4 selected_fg = config.browser_selected_fg;
+    glm::vec4 selected_bg = config.browser_selected_bg;
+    glm::vec4 unfocused_selected_fg = config.browser_inactive_bg;
+
+    std::string line = get_name();
+    int max_name = std::max(0, width - 1);
+    if (static_cast<int>(line.size()) > max_name)
+    {
+        line.resize(static_cast<size_t>(max_name));
+    }
+
+    if (selected)
+    {
+        line.insert(line.begin(), '>');
+    }
+    else
+    {
+        line.insert(line.begin(), ' ');
+    }
+
+    if (static_cast<int>(line.size()) < width)
+    {
+        line.append(static_cast<size_t>(width - line.size()), ' ');
+    }
+
+    if (selected && focused)
+    {
+        renderer->draw_string_coloured(line, location, selected_fg, selected_bg);
+    }
+    else if (selected)
+    {
+        renderer->draw_string_canvas_bg(line, location, unfocused_selected_fg);
+    }
+    else
+    {
+        renderer->draw_string_canvas_bg(line, location, normal_fg);
+    }
+
+    if (height > 1)
+    {
+        std::string blank(static_cast<size_t>(width), ' ');
+        for (int row = 1; row < height; ++row)
+        {
+            renderer->draw_string_canvas_bg(
+                blank,
+                glm::ivec2(location.x, location.y + row),
+                selected && focused ? selected_fg : normal_fg);
+        }
+    }
 }
 
 void FolderItem::scan_and_populate(
@@ -232,7 +235,70 @@ void Mp3Item::draw(
     bool selected,
     bool focused) const
 {
-    draw_item_line(get_name(), location, size, selected, focused);
+    auto renderer = Renderer::get();
+    if (!renderer)
+    {
+        return;
+    }
+
+    int width = size.x;
+    int height = size.y;
+    if (width <= 0 || height <= 0)
+    {
+        return;
+    }
+
+    const app_config& config = ActuallyGoodMP::instance().get_config();
+    glm::vec4 normal_fg = config.browser_normal_fg;
+    glm::vec4 selected_fg = config.browser_selected_fg;
+    glm::vec4 selected_bg = config.browser_selected_bg;
+    glm::vec4 unfocused_selected_fg = config.browser_inactive_bg;
+
+    std::string line = get_name();
+    int max_name = std::max(0, width - 1);
+    if (static_cast<int>(line.size()) > max_name)
+    {
+        line.resize(static_cast<size_t>(max_name));
+    }
+
+    if (selected)
+    {
+        line.insert(line.begin(), '>');
+    }
+    else
+    {
+        line.insert(line.begin(), ' ');
+    }
+
+    if (static_cast<int>(line.size()) < width)
+    {
+        line.append(static_cast<size_t>(width - line.size()), ' ');
+    }
+
+    if (selected && focused)
+    {
+        renderer->draw_string_coloured(line, location, selected_fg, selected_bg);
+    }
+    else if (selected)
+    {
+        renderer->draw_string_canvas_bg(line, location, unfocused_selected_fg);
+    }
+    else
+    {
+        renderer->draw_string_canvas_bg(line, location, normal_fg);
+    }
+
+    if (height > 1)
+    {
+        std::string blank(static_cast<size_t>(width), ' ');
+        for (int row = 1; row < height; ++row)
+        {
+            renderer->draw_string_canvas_bg(
+                blank,
+                glm::ivec2(location.x, location.y + row),
+                selected && focused ? selected_fg : normal_fg);
+        }
+    }
 }
 
 void Mp3Item::scan_and_populate(
@@ -673,15 +739,31 @@ void Browser::draw() const
     }
 
     size_t start_index = _scroll_offset;
-    size_t row_count = std::min(static_cast<size_t>(max_entry_rows), _contents.size() - start_index);
-    for (size_t i = 0; i < row_count; ++i)
+    int cursor_y = list_start_y;
+    int max_y = list_start_y + max_entry_rows;
+    for (size_t item_index = start_index; item_index < _contents.size(); ++item_index)
     {
-        size_t item_index = start_index + i;
+        if (cursor_y >= max_y)
+        {
+            break;
+        }
+
         const BrowserItem& item = *_contents[item_index];
-        glm::ivec2 row_location(_location.x + 1, list_start_y + static_cast<int>(i));
-        glm::ivec2 row_size(inner_width, 1);
+        glm::ivec2 requested = item.get_size();
+        int item_height = std::max(1, requested.y);
+        int available_height = std::max(0, max_y - cursor_y);
+        if (available_height <= 0)
+        {
+            break;
+        }
+
+        int draw_height = std::min(item_height, available_height);
+        glm::ivec2 row_location(_location.x + 1, cursor_y);
+        glm::ivec2 row_size(inner_width, draw_height);
         bool is_selected = (item_index == _selected_index);
         item.draw(row_location, row_size, is_selected, _is_focused);
+
+        cursor_y += item_height;
     }
 
     if (has_overflow && available_rows > 0 && inner_width > 0)
