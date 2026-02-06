@@ -6,6 +6,8 @@
 #include <string>
 #include <vector>
 
+#include <glm/vec4.hpp>
+
 static const std::vector<std::string> kDefaultRiceArt = {
     "                                                                          ",
     "     ▄▄                         ▄▄ ▄▄          ▄   ▄▄▄▄                   ",
@@ -59,7 +61,7 @@ static std::string strip_quotes(std::string value)
     return value;
 }
 
-static app_config::rgb_color parse_color(const std::string& value, app_config::rgb_color fallback)
+static glm::vec4 parse_color(const std::string& value, const glm::vec4& fallback)
 {
     std::string cleaned = value;
     std::replace(cleaned.begin(), cleaned.end(), ',', ' ');
@@ -86,10 +88,11 @@ static app_config::rgb_color parse_color(const std::string& value, app_config::r
         return v;
     };
 
-    app_config::rgb_color result;
+    glm::vec4 result;
     result.r = clamp01(r);
     result.g = clamp01(g);
     result.b = clamp01(b);
+    result.a = 1.0f;
     return result;
 }
 
@@ -109,29 +112,29 @@ app_config load_config(const std::string& path)
     config.search_key = '/';
     config.auto_resume_playback = true;
     config.safe_mode = false;
-    config.browser_normal_fg = {0.941f, 0.941f, 0.941f};
-    config.browser_selected_fg = {0.0f, 0.0f, 0.0f};
-    config.browser_selected_bg = {0.902f, 0.784f, 0.471f};
-    config.browser_inactive_fg = {0.078f, 0.078f, 0.078f};
-    config.browser_inactive_bg = {0.627f, 0.627f, 0.627f};
-    config.ui_box_fg = {0.941f, 0.941f, 0.941f};
-    config.ui_text_fg = {0.941f, 0.941f, 0.941f};
-    config.rice_colour = {0.969f, 0.725f, 0.333f};
-    config.rice_background_tl = {0.086f, 0.086f, 0.106f};
-    config.rice_background_tr = {0.082f, 0.086f, 0.106f};
-    config.rice_background_bl = {0.090f, 0.094f, 0.114f};
-    config.rice_background_br = {0.173f, 0.204f, 0.227f};
+    config.browser_normal_fg = glm::vec4(0.941f, 0.941f, 0.941f, 1.0f);
+    config.browser_selected_fg = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+    config.browser_selected_bg = glm::vec4(0.902f, 0.784f, 0.471f, 1.0f);
+    config.browser_inactive_fg = glm::vec4(0.078f, 0.078f, 0.078f, 1.0f);
+    config.browser_inactive_bg = glm::vec4(0.627f, 0.627f, 0.627f, 1.0f);
+    config.ui_box_fg = glm::vec4(0.941f, 0.941f, 0.941f, 1.0f);
+    config.ui_text_fg = glm::vec4(0.941f, 0.941f, 0.941f, 1.0f);
+    config.rice_colour = glm::vec4(0.969f, 0.725f, 0.333f, 1.0f);
+    config.rice_background_tl = glm::vec4(0.086f, 0.086f, 0.106f, 1.0f);
+    config.rice_background_tr = glm::vec4(0.082f, 0.086f, 0.106f, 1.0f);
+    config.rice_background_bl = glm::vec4(0.090f, 0.094f, 0.114f, 1.0f);
+    config.rice_background_br = glm::vec4(0.173f, 0.204f, 0.227f, 1.0f);
     config.rice_draw_art = true;
     config.rice_art = kDefaultRiceArt;
     config.draw_grid_canvas = false;
     config.grid_spacing_x = 6;
     config.grid_spacing_y = 3;
     config.grid_label_every = 2;
-    config.grid_background_tl = {0.086f, 0.086f, 0.106f};
-    config.grid_background_tr = {0.082f, 0.086f, 0.106f};
-    config.grid_background_bl = {0.090f, 0.094f, 0.114f};
-    config.grid_background_br = {0.173f, 0.204f, 0.227f};
-    config.grid_line_colour = {0.490f, 0.490f, 0.490f};
+    config.grid_background_tl = glm::vec4(0.086f, 0.086f, 0.106f, 1.0f);
+    config.grid_background_tr = glm::vec4(0.082f, 0.086f, 0.106f, 1.0f);
+    config.grid_background_bl = glm::vec4(0.090f, 0.094f, 0.114f, 1.0f);
+    config.grid_background_br = glm::vec4(0.173f, 0.204f, 0.227f, 1.0f);
+    config.grid_line_colour = glm::vec4(0.490f, 0.490f, 0.490f, 1.0f);
     config.metadata_max_width = 48;
     config.metadata_origin_x = config.art_width_chars + 2;
     config.metadata_origin_y = 3;

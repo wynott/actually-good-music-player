@@ -3,6 +3,8 @@
 #include <string>
 #include <vector>
 
+#include <glm/vec4.hpp>
+
 struct app_config
 {
     std::string default_track;
@@ -18,35 +20,29 @@ struct app_config
     char search_key;
     bool auto_resume_playback;
     bool safe_mode;
-    struct rgb_color
-    {
-        float r;
-        float g;
-        float b;
-    };
-    rgb_color browser_normal_fg;
-    rgb_color browser_selected_fg;
-    rgb_color browser_selected_bg;
-    rgb_color browser_inactive_fg;
-    rgb_color browser_inactive_bg;
-    rgb_color ui_box_fg;
-    rgb_color ui_text_fg;
-    rgb_color rice_colour;
-    rgb_color rice_background_tl;
-    rgb_color rice_background_tr;
-    rgb_color rice_background_bl;
-    rgb_color rice_background_br;
+    glm::vec4 browser_normal_fg;
+    glm::vec4 browser_selected_fg;
+    glm::vec4 browser_selected_bg;
+    glm::vec4 browser_inactive_fg;
+    glm::vec4 browser_inactive_bg;
+    glm::vec4 ui_box_fg;
+    glm::vec4 ui_text_fg;
+    glm::vec4 rice_colour;
+    glm::vec4 rice_background_tl;
+    glm::vec4 rice_background_tr;
+    glm::vec4 rice_background_bl;
+    glm::vec4 rice_background_br;
     bool rice_draw_art;
     std::vector<std::string> rice_art;
     bool draw_grid_canvas;
     int grid_spacing_x;
     int grid_spacing_y;
     int grid_label_every;
-    rgb_color grid_background_tl;
-    rgb_color grid_background_tr;
-    rgb_color grid_background_bl;
-    rgb_color grid_background_br;
-    rgb_color grid_line_colour;
+    glm::vec4 grid_background_tl;
+    glm::vec4 grid_background_tr;
+    glm::vec4 grid_background_bl;
+    glm::vec4 grid_background_br;
+    glm::vec4 grid_line_colour;
     int metadata_max_width;
     int metadata_origin_x;
     int metadata_origin_y;

@@ -97,10 +97,10 @@ void Canvas::build_default(const app_config& config)
     }
 
     fill_gradient(
-        glm::vec4(config.rice_background_tl.r, config.rice_background_tl.g, config.rice_background_tl.b, 1.0f),
-        glm::vec4(config.rice_background_tr.r, config.rice_background_tr.g, config.rice_background_tr.b, 1.0f),
-        glm::vec4(config.rice_background_bl.r, config.rice_background_bl.g, config.rice_background_bl.b, 1.0f),
-        glm::vec4(config.rice_background_br.r, config.rice_background_br.g, config.rice_background_br.b, 1.0f));
+        config.rice_background_tl,
+        config.rice_background_tr,
+        config.rice_background_bl,
+        config.rice_background_br);
 
     if (config.rice_draw_art)
     {
@@ -109,9 +109,7 @@ void Canvas::build_default(const app_config& config)
         {
             lines.push_back("AGMP");
         }
-        draw_art(
-            lines,
-            glm::vec4(config.rice_colour.r, config.rice_colour.g, config.rice_colour.b, 1.0f));
+        draw_art(lines, config.rice_colour);
     }
 }
 
@@ -131,9 +129,7 @@ void Canvas::build_from_album(const app_config& config, const AlbumArt& album_ar
             {
                 lines.push_back("AGMP");
             }
-            draw_art(
-                lines,
-                glm::vec4(config.rice_colour.r, config.rice_colour.g, config.rice_colour.b, 1.0f));
+            draw_art(lines, config.rice_colour);
         }
         return;
     }
@@ -149,18 +145,14 @@ void Canvas::build_grid(const app_config& config)
     }
 
     fill_gradient(
-        glm::vec4(config.grid_background_tl.r, config.grid_background_tl.g, config.grid_background_tl.b, 1.0f),
-        glm::vec4(config.grid_background_tr.r, config.grid_background_tr.g, config.grid_background_tr.b, 1.0f),
-        glm::vec4(config.grid_background_bl.r, config.grid_background_bl.g, config.grid_background_bl.b, 1.0f),
-        glm::vec4(config.grid_background_br.r, config.grid_background_br.g, config.grid_background_br.b, 1.0f));
+        config.grid_background_tl,
+        config.grid_background_tr,
+        config.grid_background_bl,
+        config.grid_background_br);
 
     int spacing_x = std::max(1, config.grid_spacing_x);
     int spacing_y = std::max(1, config.grid_spacing_y);
-    glm::vec4 line_colour(
-        config.grid_line_colour.r,
-        config.grid_line_colour.g,
-        config.grid_line_colour.b,
-        1.0f);
+    glm::vec4 line_colour = config.grid_line_colour;
 
     for (int y = 0; y < _size.y; ++y)
     {
@@ -255,9 +247,7 @@ void Canvas::build_grid(const app_config& config)
         {
             lines.push_back("AGMP");
         }
-        draw_art(
-            lines,
-            glm::vec4(config.rice_colour.r, config.rice_colour.g, config.rice_colour.b, 1.0f));
+        draw_art(lines, config.rice_colour);
     }
 }
 

@@ -32,15 +32,10 @@ Renderer* Renderer::get()
     return _instance;
 }
 
-static glm::vec4 to_vec4(const app_config::rgb_color& color)
-{
-    return glm::vec4(color.r, color.g, color.b, 1.0f);
-}
-
 static glm::vec4 default_text_colour()
 {
     const app_config& config = ActuallyGoodMP::instance().get_config();
-    return to_vec4(config.ui_text_fg);
+    return config.ui_text_fg;
 }
 
 void Renderer::set_canvas(const std::vector<Terminal::Character>& source)

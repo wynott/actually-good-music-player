@@ -432,7 +432,6 @@ std::filesystem::path Browser::get_selected_path() const
     return _contents[_selected_index]->get_path();
 }
 
-
 bool Browser::is_focused() const
 {
     return _is_focused;
@@ -537,19 +536,11 @@ void Browser::draw() const
     }
 
     const app_config& config = ActuallyGoodMP::instance().get_config();
-    auto to_vec4 = [](const app_config::rgb_color& color)
-    {
-        return glm::vec4(
-            static_cast<float>(color.r),
-            static_cast<float>(color.g),
-            static_cast<float>(color.b),
-            1.0f);
-    };
 
-    glm::vec4 normal_fg = to_vec4(config.browser_normal_fg);
-    glm::vec4 selected_fg = to_vec4(config.browser_selected_fg);
-    glm::vec4 selected_bg = to_vec4(config.browser_selected_bg);
-    glm::vec4 unfocused_selected_fg = to_vec4(config.browser_inactive_bg);
+    glm::vec4 normal_fg = config.browser_normal_fg;
+    glm::vec4 selected_fg = config.browser_selected_fg;
+    glm::vec4 selected_bg = config.browser_selected_bg;
+    glm::vec4 unfocused_selected_fg = config.browser_inactive_bg;
 
     renderer->draw_box(
         _location,

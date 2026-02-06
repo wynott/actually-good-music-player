@@ -245,11 +245,7 @@ void SpectrumAnalyzer::draw()
     }
 
     const app_config& config = ActuallyGoodMP::instance().get_config();
-    glm::vec4 bar_colour(
-        static_cast<float>(config.ui_text_fg.r),
-        static_cast<float>(config.ui_text_fg.g),
-        static_cast<float>(config.ui_text_fg.b),
-        1.0f);
+    glm::vec4 bar_colour = config.ui_text_fg;
     glm::ivec2 terminal_size = renderer->get_terminal_size();
     if (terminal_size.x <= 0 || terminal_size.y <= 0)
     {
