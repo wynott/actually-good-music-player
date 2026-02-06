@@ -314,7 +314,8 @@ void SpectrumAnalyzer::draw()
             remainder = 0.0f;
         }
 
-        if (clamped >= 0.995f && height > 0)
+        float threshold = config.spectrum_particle_threshold;
+        if (clamped >= threshold && height > 0)
         {
             int top_y = (remainder > 0.0f) ? full_cells : (full_cells - 1);
             if (top_y < 0)
@@ -325,7 +326,7 @@ void SpectrumAnalyzer::draw()
             int emit_x = min_x + x;
             EventBus::instance().publish(Event{
                 "debug.particle_emit",
-                std::to_string(emit_x) + "," + std::to_string(emit_y)});
+                std::to_string(emit_x) + "," + std::to_string(emit_y) + "," + std::to_string(freq_t)});
         }
 
         glm::vec4 low = config.spectrum_colour_low;

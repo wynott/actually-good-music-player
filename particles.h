@@ -13,7 +13,8 @@ public:
     void update(float dt_seconds);
     void draw(const app_config& config) const;
     void clear();
-    void emit_debug(int x, int y);
+    void emit_debug(int x, int y, float norm_x);
+    void set_angle_bias(float bias);
 
 private:
     struct Particle
@@ -27,4 +28,5 @@ private:
 
     std::vector<Particle> _particles;
     int _debug_subscription = 0;
+    float _angle_bias = 12.0f;
 }; 

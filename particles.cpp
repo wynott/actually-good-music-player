@@ -24,13 +24,23 @@ ParticleSystem::ParticleSystem()
             {
                 return;
             }
+            size_t comma2 = event.payload.find(',', comma + 1);
 
             int x = 0;
             int y = 0;
+            float norm_x = 0.5f;
             try
             {
                 x = std::stoi(event.payload.substr(0, comma));
-                y = std::stoi(event.payload.substr(comma + 1));
+                if (comma2 == std::string::npos)
+                {
+                    y = std::stoi(event.payload.substr(comma + 1));
+                }
+                else
+                {
+                    y = std::stoi(event.payload.substr(comma + 1, comma2 - comma - 1));
+                    norm_x = std::stof(event.payload.substr(comma2 + 1));
+                }
             }
             catch (...)
             {
@@ -38,7 +48,7 @@ ParticleSystem::ParticleSystem()
             }
 
             spdlog::info("particle event");
-            emit_debug(x, y);
+            emit_debug(x, y, norm_x);
         });
 }
 
@@ -125,15 +135,21 @@ void ParticleSystem::clear()
     _particles.clear();
 }
 
-void ParticleSystem::emit_debug(int x, int y)
+void ParticleSystem::emit_debug(int x, int y, float norm_x)
 {
     Particle particle;
     particle.x = static_cast<float>(x);
     particle.y = static_cast<float>(y);
     static std::mt19937 rng(std::random_device{}());
     std::uniform_real_distribution<float> drift(-8.0f, 8.0f);
-    particle.vx = drift(rng);
+    float bias = (std::clamp(norm_x, 0.0f, 1.0f) * 2.0f - 1.0f) * _angle_bias;
+    particle.vx = bias + drift(rng);
     particle.vy = -30.0f;
     particle.life = 0.6f;
     _particles.push_back(particle);
+}
+
+void ParticleSystem::set_angle_bias(float bias)
+{
+    _angle_bias = std::max(0.0f, bias);
 }

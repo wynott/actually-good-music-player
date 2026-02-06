@@ -108,8 +108,10 @@ ui_text_fg = "0.941, 0.941, 0.941"
 # --- Spectrum + scrubber colors (RGB 0..1) ---
 spectrum_colour_low = "0.251, 0.502, 1.000"
 spectrum_colour_high = "1.000, 0.376, 0.251"
+spectrum_particle_threshold = 0.995
 scrubber_colour_low = "0.251, 0.502, 1.000"
 scrubber_colour_high = "1.000, 0.376, 0.251"
+particle_angle_bias = 12.0
 
 # --- Rice splash (RGB 0..1) ---
 rice_colour = "0.969, 0.725, 0.333"

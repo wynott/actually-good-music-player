@@ -381,6 +381,7 @@ void ActuallyGoodMP::run()
         analyzer.update();
         analyzer.draw();
 
+        _particles.set_angle_bias(_config.particle_angle_bias);
         _particles.update(static_cast<float>(delta_time));
         _particles.draw(_config);
 
