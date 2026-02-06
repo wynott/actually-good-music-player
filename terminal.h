@@ -2,6 +2,7 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -64,6 +65,8 @@ public:
         std::vector<Character>* canvas = nullptr;
         std::vector<Character8> pending_frame;
         std::vector<Character8> previous_frame;
+        std::vector<uint32_t> particle_ids;
+        std::vector<uint32_t> previous_particle_ids;
         std::vector<bool> dirty;
     };
 
@@ -86,8 +89,10 @@ public:
 
     void set_glyph(char32_t glyph, const glm::ivec2& location);
     void set_glyph(const glm::ivec2& location, char32_t glyph, const glm::vec4& foreground, const glm::vec4& background);
+    void set_particle_glyph(const glm::ivec2& location, char32_t glyph, const glm::vec4& foreground, const glm::vec4& background, uint32_t particle_id);
     void clear_cell(const glm::ivec2& location);
     void set_canvas(const std::vector<Character>& source);
+    void clear_particle_ids();
     void select_region(const glm::ivec2& location, const glm::ivec2& size);
     void deselect_region(const glm::ivec2& location, const glm::ivec2& size);
 

@@ -1,6 +1,7 @@
 #pragma once
 #pragma once
 
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -30,10 +31,12 @@ public:
     void draw_string_coloured(const std::string& text, const glm::ivec2& location, const glm::vec4& foreground, const glm::vec4& background);
     void draw_string_canvas_bg(const std::string& text, const glm::ivec2& location, const glm::vec4& foreground);
     void draw_glyph(const glm::ivec2& location, char32_t glyph, const glm::vec4& foreground, const glm::vec4& background);
+    void draw_particle_glyph(const glm::ivec2& location, char32_t glyph, const glm::vec4& foreground, const glm::vec4& background, uint32_t particle_id);
     void clear_box(const glm::ivec2& min_corner, const glm::ivec2& size);
     void select_region(const glm::ivec2& min_corner, const glm::ivec2& size);
     void deselect_region(const glm::ivec2& min_corner, const glm::ivec2& size);
     glm::ivec2 get_terminal_size() const;
+    void clear_particle_ids();
 
 private:
     static Renderer* _instance;

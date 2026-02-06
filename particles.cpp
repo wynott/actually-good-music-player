@@ -97,6 +97,8 @@ void ParticleSystem::draw(const app_config& config) const
         return;
     }
 
+    renderer->clear_particle_ids();
+
     glm::ivec2 size = renderer->get_terminal_size();
     if (size.x <= 0 || size.y <= 0)
     {
@@ -104,15 +106,17 @@ void ParticleSystem::draw(const app_config& config) const
     }
 
     glm::vec4 color = config.spectrum_colour_high;
-    for (const auto& particle : _particles)
+    for (size_t i = 0; i < _particles.size(); ++i)
     {
+        const auto& particle = _particles[i];
         int x = static_cast<int>(particle.x);
         int y = static_cast<int>(particle.y);
         if (x < 0 || y < 0 || x >= size.x || y >= size.y)
         {
             continue;
         }
-        renderer->draw_glyph(glm::ivec2(x, y), U'*', color, glm::vec4(0.0f));
+        uint32_t particle_id = static_cast<uint32_t>(i + 1);
+        renderer->draw_particle_glyph(glm::ivec2(x, y), U'*', color, glm::vec4(0.0f), particle_id);
     }
 }
 
