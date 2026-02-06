@@ -23,7 +23,6 @@
 #include <glm/vec4.hpp>
 
 #include <spdlog/spdlog.h>
-#include <spdlog/sinks/basic_file_sink.h>
 
 #if defined(_WIN32)
 #include <windows.h>
@@ -73,13 +72,6 @@ static int map_navigation_key(const app_config& config, int key)
 
 void ActuallyGoodMP::init()
 {
-    spdlog::drop("agmp");
-    auto log = spdlog::basic_logger_mt("agmp", "agmp.log", true);
-    spdlog::set_default_logger(log);
-    spdlog::set_level(spdlog::level::trace);
-    spdlog::set_pattern("[%H:%M:%S] [%l] %v");
-    spdlog::flush_on(spdlog::level::trace);
-
     _terminal.init();
 
     http_init();

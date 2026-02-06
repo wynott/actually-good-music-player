@@ -32,6 +32,8 @@ project "agmp"
         "http.h",
         "input.cpp",
         "input.h",
+        "logging.cpp",
+        "logging.h",
         "main.cpp",
         "metadata.cpp",
         "metadata.h",

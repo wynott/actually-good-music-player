@@ -120,4 +120,4 @@ rice_background_br = "0.173, 0.204, 0.227"
 
 # --- Online art ---
 # Uses MusicBrainz + Cover Art Archive.
-enable_online_art = false
+enable_online_art = true
