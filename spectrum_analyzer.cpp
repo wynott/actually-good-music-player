@@ -291,6 +291,7 @@ void SpectrumAnalyzer::draw()
         float freq_t = (width > 1) ? static_cast<float>(x) / static_cast<float>(width - 1) : 0.0f;
         float weight = 0.25f + 2.25f * freq_t;
         value *= weight;
+        value *= _gain;
         if (value > 1.0f)
         {
             value = 1.0f;
@@ -442,4 +443,13 @@ void SpectrumAnalyzer::draw()
         }
     }
 
+}
+
+void SpectrumAnalyzer::set_gain(float gain)
+{
+    if (gain < 0.0f)
+    {
+        gain = 0.0f;
+    }
+    _gain = gain;
 }

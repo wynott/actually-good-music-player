@@ -19,6 +19,7 @@ public:
     void push_samples(const float* interleaved, int frames, int channels);
     void update();
     void draw();
+    void set_gain(float gain);
 
 private:
     void ensure_buffer();
@@ -30,4 +31,5 @@ private:
     int _fft_size = 256;
     int _band_count = 24;
     std::vector<float> _bands;
+    float _gain = 1.0f;
 };

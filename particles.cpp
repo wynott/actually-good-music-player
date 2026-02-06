@@ -115,7 +115,8 @@ void ParticleSystem::draw(const app_config& config) const
         return;
     }
 
-    glm::vec4 color = config.spectrum_colour_high;
+    glm::vec4 top_color = config.spectrum_colour_high;
+    glm::vec4 bottom_color = config.spectrum_colour_low;
     for (size_t i = 0; i < _particles.size(); ++i)
     {
         const auto& particle = _particles[i];
@@ -125,8 +126,26 @@ void ParticleSystem::draw(const app_config& config) const
         {
             continue;
         }
+        float vx = particle.vx;
+        float vy = particle.vy;
+        char32_t glyph = U'•';
+        float mag = std::sqrt(vx * vx + vy * vy);
+        if (mag > 0.001f)
+        {
+            float angle = std::atan2(-vy, vx);
+            if (angle < 0.0f)
+            {
+                angle += 6.2831853f;
+            }
+
+            static const char32_t arrows[8] = {U'→', U'↗', U'↑', U'↖', U'←', U'↙', U'↓', U'↘'};
+            int index = static_cast<int>(std::floor((angle + 0.3926991f) / 0.7853982f)) % 8;
+            glyph = arrows[index];
+        }
+        float t = (size.y > 1) ? static_cast<float>(y) / static_cast<float>(size.y - 1) : 0.0f;
+        glm::vec4 color = top_color + (bottom_color - top_color) * t;
         uint32_t particle_id = static_cast<uint32_t>(i + 1);
-        renderer->draw_particle_glyph(glm::ivec2(x, y), U'*', color, glm::vec4(0.0f), particle_id);
+        renderer->draw_particle_glyph(glm::ivec2(x, y), glyph, color, glm::vec4(0.0f), particle_id);
     }
 }
 

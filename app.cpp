@@ -376,6 +376,7 @@ void ActuallyGoodMP::run()
         if (gain >= 0.0f)
         {
             _player.set_volume(gain);
+            analyzer.set_gain(gain);
         }
 
         analyzer.update();
