@@ -11,8 +11,8 @@ Queue::Queue() = default;
 
 Queue::Queue(const glm::ivec2& location, const glm::ivec2& size)
 {
-    set_location(location);
-    set_size(size);
+    ActuallyGoodModule::set_location(location);
+    ActuallyGoodModule::set_size(size);
 }
 
 void Queue::ensure_stop_item()

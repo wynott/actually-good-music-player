@@ -243,8 +243,8 @@ MetadataPanel::MetadataPanel() = default;
 
 MetadataPanel::MetadataPanel(const glm::ivec2& location, const glm::ivec2& size)
 {
-    set_location(location);
-    set_size(size);
+    ActuallyGoodModule::set_location(location);
+    ActuallyGoodModule::set_size(size);
 }
 
 void MetadataPanel::draw(const app_config& config, const track_metadata& meta)

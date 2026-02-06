@@ -316,8 +316,8 @@ AlbumArt::AlbumArt() = default;
 
 AlbumArt::AlbumArt(const glm::ivec2& location, const glm::ivec2& size)
 {
-    set_location(location);
-    set_size(size);
+    ActuallyGoodModule::set_location(location);
+    ActuallyGoodModule::set_size(size);
 }
 
 AlbumArt::~AlbumArt()
@@ -442,8 +442,8 @@ bool AlbumArt::render_current(
     }
 
     int top_left_y = size.y - origin_y - out_h;
-    set_location(glm::ivec2(origin_x, top_left_y));
-    set_size(glm::ivec2(out_w, out_h));
+    ActuallyGoodModule::set_location(glm::ivec2(origin_x, top_left_y));
+    ActuallyGoodModule::set_size(glm::ivec2(out_w, out_h));
 
     if (!snapshot.ready || !snapshot.has_art)
     {

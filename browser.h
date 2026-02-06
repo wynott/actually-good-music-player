@@ -169,8 +169,8 @@ public:
     Browser();
     Browser(const std::string& name, const std::filesystem::path& path, const glm::ivec2& location, const glm::ivec2& size);
 
-    void set_location(const glm::ivec2& location);
-    void set_size(const glm::ivec2& size);
+    using ActuallyGoodModule::set_location;
+    using ActuallyGoodModule::set_size;
     void set_name(const std::string& name);
     void set_path(const std::filesystem::path& path);
     void set_selected_index(size_t index);
@@ -186,8 +186,8 @@ public:
     void set_right(Browser* right);
 
 
-    const glm::ivec2& get_location() const;
-    const glm::ivec2& get_size() const;
+    using ActuallyGoodModule::get_location;
+    using ActuallyGoodModule::get_size;
     const std::string& get_name() const;
     const std::filesystem::path& get_path() const;
     size_t get_selected_index() const;
