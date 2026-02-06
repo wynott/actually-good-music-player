@@ -367,15 +367,22 @@ void Scrubber::draw(const app_config& config) const
             glm::vec4 low = config.scrubber_colour_low;
             glm::vec4 high = config.scrubber_colour_high;
             glm::vec4 fg = low + (high - low) * t;
-            glm::vec4 bg(0.0f);
-            if (y < full_cells)
-            {
-                renderer->draw_glyph(glm::ivec2(column_x, row_y), U'█', fg, bg);
-            }
-            else if (y == full_cells && remainder > 0.0f)
+            float step = (inner_height > 1) ? 1.0f / static_cast<float>(inner_height - 1) : 0.0f;
+            float t_top = std::min(1.0f, t + step * 0.5f);
+            glm::vec4 bg = low + (high - low) * t_top;
+            if (remainder > 0.0f && y == full_cells)
             {
                 char32_t glyph = partial_block(remainder);
                 renderer->draw_glyph(glm::ivec2(column_x, row_y), glyph, fg, bg);
+            }
+            else if (remainder <= 0.0f && y == full_cells - 1)
+            {
+                char32_t glyph = partial_block(1.0f);
+                renderer->draw_glyph(glm::ivec2(column_x, row_y), glyph, fg, bg);
+            }
+            else if (y < full_cells)
+            {
+                renderer->draw_glyph(glm::ivec2(column_x, row_y), U'▄', fg, bg);
             }
             else
             {
