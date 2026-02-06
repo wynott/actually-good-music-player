@@ -20,6 +20,7 @@ public:
     void set_location(const glm::ivec2& location);
     void set_size(const glm::ivec2& size);
     void set_progress(float progress_01);
+    void set_time_ms(int elapsed_ms, int total_ms);
     void set_waveform(const std::vector<float>& amplitudes_01);
     void request_waveform(const std::string& path, int columns);
 
@@ -29,6 +30,8 @@ private:
     glm::ivec2 _location = glm::ivec2(0);
     glm::ivec2 _size = glm::ivec2(0);
     float _progress = 0.0f;
+    int _elapsed_ms = 0;
+    int _total_ms = 0;
     std::vector<float> _waveform;
     mutable std::mutex _waveform_mutex;
     std::atomic<int> _waveform_job_id{0};

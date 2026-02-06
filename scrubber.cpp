@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 #include <mutex>
 #include <thread>
 
@@ -29,6 +30,12 @@ void Scrubber::set_size(const glm::ivec2& size)
 void Scrubber::set_progress(float progress_01)
 {
     _progress = std::clamp(progress_01, 0.0f, 1.0f);
+}
+
+void Scrubber::set_time_ms(int elapsed_ms, int total_ms)
+{
+    _elapsed_ms = std::max(0, elapsed_ms);
+    _total_ms = std::max(0, total_ms);
 }
 
 void Scrubber::set_waveform(const std::vector<float>& amplitudes_01)
@@ -196,14 +203,42 @@ void Scrubber::draw(const app_config& config) const
     glm::ivec2 actual_size = renderer->draw_box(_location, draw_size, config.ui_box_fg, glm::vec4(0.0f));
 
     int inner_width = actual_size.x - 2;
-    int inner_height = actual_size.y - 2;
+    int inner_height = actual_size.y - 3;
     if (inner_width <= 0 || inner_height <= 0)
     {
         return;
     }
 
+    auto format_time = [](int ms)
+    {
+        int total_seconds = std::max(0, ms / 1000);
+        int minutes = total_seconds / 60;
+        int seconds = total_seconds % 60;
+        char buffer[16];
+        std::snprintf(buffer, sizeof(buffer), "%d:%02d", minutes, seconds);
+        return std::string(buffer);
+    };
+
+    std::string elapsed_text = format_time(_elapsed_ms);
+    std::string remaining_text = format_time(std::max(0, _total_ms - _elapsed_ms));
+    if (remaining_text != "0:00")
+    {
+        remaining_text.insert(remaining_text.begin(), '-');
+    }
+
+    renderer->draw_string(
+        elapsed_text,
+        glm::ivec2(_location.x + 1, _location.y + 1));
+    int right_x = _location.x + actual_size.x - 1 - static_cast<int>(remaining_text.size());
+    if (right_x >= _location.x + 1)
+    {
+        renderer->draw_string(
+            remaining_text,
+            glm::ivec2(right_x, _location.y + 1));
+    }
+
     int origin_x = _location.x + 1;
-    int origin_y = _location.y + 1;
+    int origin_y = _location.y + 2;
 
     int progress_x = origin_x + static_cast<int>(std::round(_progress * (inner_width - 1)));
     progress_x = std::clamp(progress_x, origin_x, origin_x + inner_width - 1);

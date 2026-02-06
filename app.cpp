@@ -305,6 +305,7 @@ void ActuallyGoodMP::run()
                 {
                     float progress = static_cast<float>(_player.get_position_ms()) / static_cast<float>(meta.duration_ms);
                     _scrubber.set_progress(progress);
+                    _scrubber.set_time_ms(_player.get_position_ms(), meta.duration_ms);
                 }
             }
         }
