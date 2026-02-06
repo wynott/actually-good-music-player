@@ -77,23 +77,11 @@ glm::ivec2 Renderer::draw_box(
 
     glm::ivec2 actual_size(max_x - min_x + 1, max_y - min_y + 1);
 
-    auto set_cell = [&](int x, int y, char32_t glyph)
-    {
-        if (x < min_x || x > max_x || y < min_y || y > max_y)
-        {
-            return;
-        }
-
-        _terminal.set_glyph(
-            glm::ivec2(x, y),
-            glyph,
-            foreground,
-            background);
-    };
+    glm::vec4 transparent_bg(0.0f);
 
     if (min_x == max_x && min_y == max_y)
     {
-        set_cell(min_x, min_y, U'╭');
+        _terminal.set_glyph(glm::ivec2(min_x, min_y), U'╭', foreground, transparent_bg);
         return actual_size;
     }
 
@@ -110,7 +98,7 @@ glm::ivec2 Renderer::draw_box(
             {
                 glyph = U'╮';
             }
-            set_cell(x, min_y, glyph);
+            _terminal.set_glyph(glm::ivec2(x, min_y), glyph, foreground, transparent_bg);
         }
         return actual_size;
     }
@@ -128,26 +116,26 @@ glm::ivec2 Renderer::draw_box(
             {
                 glyph = U'╰';
             }
-            set_cell(min_x, y, glyph);
+            _terminal.set_glyph(glm::ivec2(min_x, y), glyph, foreground, transparent_bg);
         }
         return actual_size;
     }
 
-    set_cell(min_x, min_y, U'╭');
-    set_cell(max_x, min_y, U'╮');
-    set_cell(min_x, max_y, U'╰');
-    set_cell(max_x, max_y, U'╯');
+    _terminal.set_glyph(glm::ivec2(min_x, min_y), U'╭', foreground, transparent_bg);
+    _terminal.set_glyph(glm::ivec2(max_x, min_y), U'╮', foreground, transparent_bg);
+    _terminal.set_glyph(glm::ivec2(min_x, max_y), U'╰', foreground, transparent_bg);
+    _terminal.set_glyph(glm::ivec2(max_x, max_y), U'╯', foreground, transparent_bg);
 
     for (int x = min_x + 1; x < max_x; ++x)
     {
-        set_cell(x, min_y, U'─');
-        set_cell(x, max_y, U'─');
+        _terminal.set_glyph(glm::ivec2(x, min_y), U'─', foreground, transparent_bg);
+        _terminal.set_glyph(glm::ivec2(x, max_y), U'─', foreground, transparent_bg);
     }
 
     for (int y = min_y + 1; y < max_y; ++y)
     {
-        set_cell(min_x, y, U'│');
-        set_cell(max_x, y, U'│');
+        _terminal.set_glyph(glm::ivec2(min_x, y), U'│', foreground, transparent_bg);
+        _terminal.set_glyph(glm::ivec2(max_x, y), U'│', foreground, transparent_bg);
     }
 
     return actual_size;
