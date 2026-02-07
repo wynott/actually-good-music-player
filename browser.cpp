@@ -564,6 +564,11 @@ void Browser::set_path(const std::filesystem::path& path)
     soft_select();
 }
 
+void Browser::set_max_size(const glm::ivec2& size)
+{
+    _max_size = size;
+}
+
 void Browser::set_selected_index(size_t index)
 {
     _selected_index = index;
@@ -643,6 +648,15 @@ void Browser::resize_to_fit_contents()
     _size.y = required_height;
 
     _size.x = std::max(3, previous_size.x);
+
+    if (_max_size.x > 0 && _size.x > _max_size.x)
+    {
+        _size.x = _max_size.x;
+    }
+    if (_max_size.y > 0 && _size.y > _max_size.y)
+    {
+        _size.y = _max_size.y;
+    }
 
     auto renderer = Renderer::get();
     if (!renderer)

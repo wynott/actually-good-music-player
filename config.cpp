@@ -127,6 +127,8 @@ app_config load_config(const std::string& path)
     config.rice_background_bl = glm::vec4(0.090f, 0.094f, 0.114f, 1.0f);
     config.rice_background_br = glm::vec4(0.173f, 0.204f, 0.227f, 1.0f);
     config.rice_draw_art = true;
+    config.rice_origin_x = 0;
+    config.rice_origin_y = 0;
     config.rice_art = kDefaultRiceArt;
     config.draw_grid_canvas = false;
     config.grid_spacing_x = 6;
@@ -164,8 +166,14 @@ app_config load_config(const std::string& path)
     config.col_width_artist = 20;
     config.col_width_album = 24;
     config.col_width_song = 30;
+    config.browser_height_artist = 12;
+    config.browser_height_album = 12;
+    config.browser_height_song = 12;
+    config.browser_height_action = 6;
     config.art_width_chars = 80;
     config.art_height_chars = 40;
+    config.art_origin_x = 0;
+    config.art_origin_y = 0;
     config.browser_padding = 0;
     config.target_refresh_rate = 60;
     config.listen_port = 4242;
@@ -406,6 +414,26 @@ app_config load_config(const std::string& path)
             else if (value == "false" || value == "0" || value == "no")
             {
                 config.rice_draw_art = false;
+            }
+        }
+        else if (key == "rice_origin_x")
+        {
+            try
+            {
+                config.rice_origin_x = std::max(0, std::stoi(value));
+            }
+            catch (...)
+            {
+            }
+        }
+        else if (key == "rice_origin_y")
+        {
+            try
+            {
+                config.rice_origin_y = std::max(0, std::stoi(value));
+            }
+            catch (...)
+            {
             }
         }
         else if (key == "draw_grid_canvas")
@@ -736,11 +764,71 @@ app_config load_config(const std::string& path)
             {
             }
         }
+        else if (key == "art_origin_x")
+        {
+            try
+            {
+                config.art_origin_x = std::max(0, std::stoi(value));
+            }
+            catch (...)
+            {
+            }
+        }
+        else if (key == "art_origin_y")
+        {
+            try
+            {
+                config.art_origin_y = std::max(0, std::stoi(value));
+            }
+            catch (...)
+            {
+            }
+        }
         else if (key == "browser_padding")
         {
             try
             {
                 config.browser_padding = std::max(0, std::stoi(value));
+            }
+            catch (...)
+            {
+            }
+        }
+        else if (key == "browser_height_artist")
+        {
+            try
+            {
+                config.browser_height_artist = std::max(1, std::stoi(value));
+            }
+            catch (...)
+            {
+            }
+        }
+        else if (key == "browser_height_album")
+        {
+            try
+            {
+                config.browser_height_album = std::max(1, std::stoi(value));
+            }
+            catch (...)
+            {
+            }
+        }
+        else if (key == "browser_height_song")
+        {
+            try
+            {
+                config.browser_height_song = std::max(1, std::stoi(value));
+            }
+            catch (...)
+            {
+            }
+        }
+        else if (key == "browser_height_action")
+        {
+            try
+            {
+                config.browser_height_action = std::max(1, std::stoi(value));
             }
             catch (...)
             {

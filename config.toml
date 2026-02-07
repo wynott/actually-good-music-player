@@ -21,9 +21,11 @@ rice_art = """
                                                          ▀▀▀
 """
 rice_draw_art = true
+rice_origin_x = 0
+rice_origin_y = 0
 
 # --- Grid canvas ---
-draw_grid_canvas = false
+draw_grid_canvas = true
 grid_spacing_x = 6
 grid_spacing_y = 3
 grid_label_every = 1
@@ -60,15 +62,21 @@ listen_port = 4242
 target_refresh_rate = 60
 
 # --- Browser layout ---
-col_width_artist = 20
+col_width_artist = 25
 col_width_album = 24
 col_width_song = 30
+browser_height_artist = 48
+browser_height_album = 12
+browser_height_song = 12
+browser_height_action = 6
 browser_padding = 0
 
 # --- Album art layout ---
 # Terminal characters are not square; adjust width/height per font.
 art_width_chars = 40
 art_height_chars = 20
+art_origin_x = 30
+art_origin_y = 35
 
 # --- Metadata panel layout ---
 # Max characters for metadata lines before truncation.

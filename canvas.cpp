@@ -12,6 +12,11 @@ Canvas::Canvas(const glm::ivec2& size)
     resize(size);
 }
 
+void Canvas::set_origin(const glm::ivec2& origin)
+{
+    _origin = origin;
+}
+
 void Canvas::resize(const glm::ivec2& size)
 {
     _size = size;
@@ -100,6 +105,7 @@ void Canvas::build_default(const app_config& config)
         return;
     }
 
+    set_origin(glm::ivec2(0));
     fill_gradient(
         config.rice_background_tl,
         config.rice_background_tr,
@@ -121,6 +127,7 @@ void Canvas::build_default(const app_config& config)
 
 void Canvas::build_from_album(const app_config& config, const AlbumArt& album_art)
 {
+    set_origin(glm::ivec2(0));
     glm::vec4 avg_tl(0.0f);
     glm::vec4 avg_tr(0.0f);
     glm::vec4 avg_bl(0.0f);
@@ -359,8 +366,7 @@ void Canvas::draw_art(const std::vector<std::string>& lines, const glm::vec4& co
         art_width = std::max(art_width, count_codepoints(line));
     }
 
-    glm::ivec2 center(_size.x / 2, _size.y / 2);
-    glm::ivec2 top_left(center.x - art_width / 2, center.y - art_height / 2);
+    glm::ivec2 top_left = _origin;
 
     for (int y = 0; y < art_height; ++y)
     {

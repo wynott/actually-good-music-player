@@ -35,6 +35,8 @@ struct app_config
     glm::vec4 rice_background_bl;
     glm::vec4 rice_background_br;
     bool rice_draw_art;
+    int rice_origin_x;
+    int rice_origin_y;
     std::vector<std::string> rice_art;
     bool draw_grid_canvas;
     int grid_spacing_x;
@@ -72,8 +74,14 @@ struct app_config
     int col_width_artist;
     int col_width_album;
     int col_width_song;
+    int browser_height_artist;
+    int browser_height_album;
+    int browser_height_song;
+    int browser_height_action;
     int art_width_chars;
     int art_height_chars;
+    int art_origin_x;
+    int art_origin_y;
     int browser_padding;
     int target_refresh_rate;
     int listen_port;

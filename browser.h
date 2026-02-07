@@ -173,6 +173,7 @@ public:
     using ActuallyGoodModule::set_size;
     void set_name(const std::string& name);
     void set_path(const std::filesystem::path& path);
+    void set_max_size(const glm::ivec2& size);
     void set_selected_index(size_t index);
     void set_custom_contents(std::vector<std::unique_ptr<BrowserItem>> contents);
     void move_selection(int direction);
@@ -214,6 +215,7 @@ private:
     Browser* _right = nullptr;
 
     glm::vec4 _canvas_sample = glm::vec4(-1.0f);
+    glm::ivec2 _max_size = glm::ivec2(0);
 
 private:
     int get_visible_rows() const;

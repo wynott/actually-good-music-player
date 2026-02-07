@@ -126,7 +126,7 @@ void ActuallyGoodMP::init()
         "album_art.updated",
         [this](const Event&)
         {
-            _album_art.refresh(_config, 0, 0);
+            _album_art.refresh(_config, _config.art_origin_x, _config.art_origin_y);
             update_canvas_from_album();
         });
 
@@ -134,7 +134,7 @@ void ActuallyGoodMP::init()
         "album_art.online_updated",
         [this](const Event&)
         {
-            _album_art.refresh(_config, 0, 0);
+            _album_art.refresh(_config, _config.art_origin_x, _config.art_origin_y);
             update_canvas_from_album();
             if (auto renderer = Renderer::get())
             {
@@ -154,7 +154,7 @@ void ActuallyGoodMP::init()
             _player.ensure_context_from_track();
             auto context = _player.get_context();
             _album_art.set_track(_player.get_current_track(), _config, context.artist, context.album);
-            _album_art.refresh(_config, 0, 0);
+            _album_art.refresh(_config, _config.art_origin_x, _config.art_origin_y);
             update_canvas_from_album();
 
             int scrubber_columns = std::max(1, _config.scrubber_width - 2);
@@ -302,7 +302,7 @@ void ActuallyGoodMP::run()
     _player.ensure_context_from_track();
     player_context context = _player.get_context();
     _album_art.set_track(_player.get_current_track(), _config, context.artist, context.album);
-    _album_art.refresh(_config, 0, 0);
+            _album_art.refresh(_config, _config.art_origin_x, _config.art_origin_y);
     update_canvas_from_album();
 
     _scrubber.request_waveform(_player.get_current_track(), std::max(1, _config.scrubber_width - 2));
@@ -586,28 +586,32 @@ void ActuallyGoodMP::init_browsers()
     spdlog::trace("ActuallyGoodMP::init_browsers() begin");
     int browser_gap = _config.browser_padding;
     glm::ivec2 browser_origin(2, 3);
-    glm::ivec2 artist_browser_size(std::max(1, _config.col_width_artist + 2), 12);
-    glm::ivec2 album_browser_size(std::max(1, _config.col_width_album + 2), 12);
-    glm::ivec2 song_browser_size(std::max(1, _config.col_width_song + 2), 12);
-    glm::ivec2 action_browser_size(std::max(1, _config.col_width_song + 2), 6);
+    glm::ivec2 artist_browser_size(std::max(1, _config.col_width_artist + 2), _config.browser_height_artist);
+    glm::ivec2 album_browser_size(std::max(1, _config.col_width_album + 2), _config.browser_height_album);
+    glm::ivec2 song_browser_size(std::max(1, _config.col_width_song + 2), _config.browser_height_song);
+    glm::ivec2 action_browser_size(std::max(1, _config.col_width_song + 2), _config.browser_height_action);
 
     _artist_browser.set_name("Artist");
     _artist_browser.set_location(browser_origin);
     _artist_browser.set_size(artist_browser_size);
+    _artist_browser.set_max_size(artist_browser_size);
     _album_browser.set_name("Album");
     _album_browser.set_location(glm::ivec2(browser_origin.x + artist_browser_size.x + browser_gap, browser_origin.y));
     _album_browser.set_size(album_browser_size);
+    _album_browser.set_max_size(album_browser_size);
     _song_browser.set_name("Song");
     _song_browser.set_location(glm::ivec2(
        browser_origin.x + artist_browser_size.x + browser_gap + album_browser_size.x + browser_gap,
        browser_origin.y));
     _song_browser.set_size(song_browser_size);
+    _song_browser.set_max_size(song_browser_size);
 
     _action_browser.set_name("Actions");
     _action_browser.set_location(glm::ivec2(
         _song_browser.get_location().x + song_browser_size.x + browser_gap,
         _song_browser.get_location().y));
     _action_browser.set_size(action_browser_size);
+    _action_browser.set_max_size(action_browser_size);
 
     _artist_browser.set_right(&_album_browser);
     _album_browser.set_left(&_artist_browser);

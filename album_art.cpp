@@ -445,7 +445,7 @@ bool AlbumArt::render_current(
         return false;
     }
 
-    int top_left_y = size.y - origin_y - out_h;
+    int top_left_y = origin_y;
     ActuallyGoodModule::set_location(glm::ivec2(origin_x, top_left_y));
     ActuallyGoodModule::set_size(glm::ivec2(out_w, out_h));
 
