@@ -2,6 +2,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 class Browser;
 class Queue;
@@ -37,6 +38,8 @@ public:
     void set_spectrum_analyzer(SpectrumAnalyzer* analyzer);
     void set_volume(float volume);
     void handle_track_finished();
+    void skip_next();
+    void skip_previous();
 
 private:
     void on_track_finished();
@@ -46,4 +49,5 @@ private:
     Browser* _song_browser = nullptr;
     SpectrumAnalyzer* _spectrum_analyzer = nullptr;
     Queue* _queue = nullptr;
+    std::vector<std::string> _history;
 };

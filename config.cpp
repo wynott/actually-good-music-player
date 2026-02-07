@@ -103,6 +103,8 @@ app_config load_config(const std::string& path)
     config.library_path = "library";
     config.play_pause_key = ' ';
     config.quit_key = 'q';
+    config.skip_next_key = 'l';
+    config.skip_prev_key = 'j';
     config.nav_up_key = 'w';
     config.nav_down_key = 's';
     config.nav_left_key = 'a';
@@ -252,6 +254,20 @@ app_config load_config(const std::string& path)
             if (!value.empty())
             {
                 config.quit_key = value[0];
+            }
+        }
+        else if (key == "skip_next_key")
+        {
+            if (!value.empty())
+            {
+                config.skip_next_key = value[0];
+            }
+        }
+        else if (key == "skip_prev_key")
+        {
+            if (!value.empty())
+            {
+                config.skip_prev_key = value[0];
             }
         }
         else if (key == "nav_up_key")

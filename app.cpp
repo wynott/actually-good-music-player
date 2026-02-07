@@ -367,12 +367,14 @@ void ActuallyGoodMP::run()
             _player.handle_track_finished();
         }
 
+        int duration_ms = 0;
         if (!_config.safe_mode)
         {
             track_metadata meta;
             if (read_track_metadata(_player.get_current_track(), meta))
             {
                 metadata_panel.draw(_config, meta);
+                duration_ms = meta.duration_ms;
                 if (meta.duration_ms > 0)
                 {
                     float progress = static_cast<float>(_player.get_position_ms()) / static_cast<float>(meta.duration_ms);
@@ -437,6 +439,29 @@ void ActuallyGoodMP::run()
             char ch = normalize_key(static_cast<char>(key));
             char pause_key = normalize_key(_config.play_pause_key);
             char quit_key = normalize_key(_config.quit_key);
+            char next_key = normalize_key(_config.skip_next_key);
+            char prev_key = normalize_key(_config.skip_prev_key);
+            if (ch >= '0' && ch <= '9')
+            {
+                if (duration_ms > 0)
+                {
+                    int digit = ch - '0';
+                    float fraction = static_cast<float>(digit) / 10.0f;
+                    int target_ms = static_cast<int>(std::round(static_cast<float>(duration_ms) * fraction));
+                    _player.seek_ms(target_ms);
+                }
+                continue;
+            }
+            if (ch == next_key)
+            {
+                _player.skip_next();
+                continue;
+            }
+            if (ch == prev_key)
+            {
+                _player.skip_previous();
+                continue;
+            }
             if (ch == pause_key)
             {
                 _player.toggle_pause();

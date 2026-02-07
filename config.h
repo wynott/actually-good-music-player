@@ -11,6 +11,8 @@ struct app_config
     std::string library_path;
     char play_pause_key;
     char quit_key;
+    char skip_next_key;
+    char skip_prev_key;
     char nav_up_key;
     char nav_down_key;
     char nav_left_key;

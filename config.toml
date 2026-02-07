@@ -23,7 +23,7 @@ rice_art = """
 rice_draw_art = true
 
 # --- Grid canvas ---
-draw_grid_canvas = true
+draw_grid_canvas = false
 grid_spacing_x = 6
 grid_spacing_y = 3
 grid_label_every = 1
@@ -42,6 +42,8 @@ safe_mode = false
 # --- Input ---
 play_pause_key = "k"
 quit_key = "q"
+skip_prev_key = "j"
+skip_next_key = "l"
 nav_up_key = "w"
 nav_down_key = "s"
 nav_left_key = "a"
@@ -77,16 +79,16 @@ metadata_width = 34
 metadata_height = 12
 
 # --- Spectrum analyzer layout ---
-spectrum_origin_x = 100
-spectrum_origin_y = 30
-spectrum_width = 70
+spectrum_origin_x = 69
+spectrum_origin_y = 33
+spectrum_width = 72
 spectrum_height = 20
 
 # --- Queue layout ---
-queue_origin_x = 150
+queue_origin_x = 170
 queue_origin_y = 2
 queue_width = 34
-queue_height = 8
+queue_height = 40
 
 # --- Scrubber layout ---
 scrubber_origin_x = 1

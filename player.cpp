@@ -199,6 +199,11 @@ void Player::set_current_track(const std::string& path)
         return;
     }
 
+    if (!_current_track.empty())
+    {
+        _history.push_back(_current_track);
+    }
+
     _current_track = path;
     _context = player_context{};
     _context.track_path = path;
@@ -281,6 +286,25 @@ void Player::set_volume(float volume)
 void Player::handle_track_finished()
 {
     on_track_finished();
+}
+
+void Player::skip_next()
+{
+    on_track_finished();
+}
+
+void Player::skip_previous()
+{
+    if (_history.empty())
+    {
+        return;
+    }
+
+    std::string prev_path = _history.back();
+    _history.pop_back();
+    set_current_track(prev_path);
+    stop_playback();
+    start_playback(get_current_track());
 }
 
 void Player::on_track_finished()
